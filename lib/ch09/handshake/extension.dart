@@ -59,6 +59,10 @@ class ExtUseExtendedMasterSecret extends Extension {
     return ExtensionType.ExtensionTypeUseExtendedMasterSecret;
   }
 
+  int size() {
+    return 2;
+  }
+
   List<int> encode() {
     return [];
   }
@@ -136,6 +140,10 @@ class ExtUseSRTP extends Extension {
 class ExtSupportedPointFormats extends Extension {
   List<int> pointFormats = [];
 
+  int size() {
+    return 2 + 1 + pointFormats.length;
+  }
+
   @override
   String toString() {
     return "[SupportedPointFormats] Point Formats: $pointFormats";
@@ -178,6 +186,10 @@ class ExtSupportedEllipticCurves extends Extension {
     return ExtensionType.ExtensionTypeSupportedEllipticCurves;
   }
 
+  int size() {
+    return 2 + 2 + curves.length * 2;
+  }
+
   List<int> encode() {
     List<int> result = [];
     result.add((curves.length * 2) >> 8); // Length in MSB
@@ -200,7 +212,7 @@ class ExtSupportedEllipticCurves extends Extension {
       return curve;
     });
 
-    print("Curves: $curves");
+    // print("Curves: $curves");
   }
 }
 
@@ -209,6 +221,10 @@ class ExtUnknown extends Extension {
   final int dataLength;
 
   ExtUnknown({required this.type, required this.dataLength});
+
+  int size() {
+    return 2 + 1 + dataLength;
+  }
 
   @override
   String toString() {

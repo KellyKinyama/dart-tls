@@ -1,12 +1,14 @@
 import 'dart:io';
-import 'dart:typed_data';
+// import 'dart:typed_data';
 
-import 'package:dart_tls/ch09/handshake/handshake_context.dart';
+// import 'package:dart_tls/ch09/handshake/handshake_context.dart';
+// import 'package:dart_tls/ch09/handshaker/psk_aes_128_ccm.dart';
 import 'package:dart_tls/ch09/handshaker/aes_gcm_128_sha_256.dart';
-import 'package:dart_tls/dart_tls.dart' as dart_tls;
+// import 'package:dart_tls/dart_tls.dart' as dart_tls;
 
 void main(List<String> arguments) {
-  String ip = "10.100.53.174";
+  String ip = "127.0.0.1";
+  // String ip = "10.100.53.174";
   int port = 4444;
   RawDatagramSocket.bind(InternetAddress(ip), port)
       .then((RawDatagramSocket socket) {
@@ -21,7 +23,7 @@ void main(List<String> arguments) {
       if (d != null) {
         handshakeManager.port = d.port;
         print("recieved data ...");
-        HandshakeContext context = HandshakeContext();
+        // HandshakeContext context = HandshakeContext();
         // final dtlsMsg =
         //     DecodeDtlsMessageResult.decode(context, d.data, 0, d.data.length);
 

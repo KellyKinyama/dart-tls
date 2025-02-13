@@ -11,11 +11,15 @@ dependencies:
   asn1lib: ^1.5.9
   basic_utils: ^5.7.0
   collection: ^1.19.1
+  convert: ^3.1.2
   crypto: ^3.0.6
   cryptography: ^2.7.0
+  dtls2: ^0.18.1
   ecdsa: ^0.1.2
   elliptic: ^0.3.11
   hex: ^0.2.0
+  pinenacl: ^0.6.0
+  pointycastle: ^3.9.1
   x25519: ^0.1.1
   # path: ^1.8.0
 

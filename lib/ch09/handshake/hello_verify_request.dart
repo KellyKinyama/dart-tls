@@ -17,13 +17,13 @@ class HelloVerifyRequest {
   /// Returns the handshake type.
   // HandshakeType get handshakeType => HandshakeType.HelloVerifyRequest;
 
-  // ContentType getContentType() {
-  //   return ContentType.Handshake;
-  // }
+  ContentType getContentType() {
+    return ContentType.content_handshake;
+  }
 
-  // HandshakeType getHandshakeType() {
-  //   return HandshakeType.HelloVerifyRequest;
-  // }
+  HandshakeType getHandshakeType() {
+    return HandshakeType.hello_verify_request;
+  }
 
   /// Returns the size of the marshaled data.
   int get size => 1 + 1 + 1 + cookie.length;
@@ -81,8 +81,7 @@ class HelloVerifyRequest {
   int get hashCode => version.hashCode ^ const ListEquality().hash(cookie);
 
   @override
-  String toString() =>
-      'HelloVerifyRequest(version: $version, cookie: $cookie)';
+  String toString() => 'HelloVerifyRequest(version: $version, cookie: $cookie)';
 }
 
 void main() {

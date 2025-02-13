@@ -1,5 +1,8 @@
 import 'dart:typed_data';
 
+import '../crypto.dart';
+import 'handshake.dart';
+
 class ServerKeyExchange {
   final List<int> identityHint;
   final EllipticCurveType ellipticCurveType;
@@ -17,14 +20,14 @@ class ServerKeyExchange {
     required this.signature,
   });
 
-  // ContentType getContentType() {
-  //   return ContentType.Handshake;
-  // }
+  ContentType getContentType() {
+    return ContentType.content_handshake;
+  }
 
   // Handshake type
-  // HandshakeType getHandshakeType() {
-  //   return HandshakeType.ServerKeyExchange;
-  // }
+  HandshakeType getHandshakeType() {
+    return HandshakeType.server_key_exchange;
+  }
 
   // Calculate size
   int size() {
@@ -137,92 +140,13 @@ class ServerKeyExchange {
 // Curve type 3: secp384r1 (NIST P-384)
 // Curve type 4: x25519 (X25519, widely used for Diffie-Hellman)
 // Curve type 5: x448 (X448, a high-security curve)
-enum EllipticCurveType {
-  NamedCurve(0x03),
-  unsupported(255);
-
-  const EllipticCurveType(this.value);
-  final int value;
-
-  factory EllipticCurveType.fromInt(int key) {
-    return values.firstWhere((element) => element.value == key);
-  }
-}
-
-enum ECCurveType {
-  //  deprecated (1..2),
-  NAMED_CURVE(3);
-  //  reserved(248..255)
-
-  const ECCurveType(this.value);
-  final int value;
-
-  factory ECCurveType.fromInt(int key) {
-    return values.firstWhere((element) => element.value == key);
-  }
-}
-
-enum NamedCurve {
-  Unsupported(0x0000),
-  P256(0x0017),
-  P384(0x0018),
-  X25519(0x001d);
-
-  const NamedCurve(this.value);
-  final int value;
-
-  factory NamedCurve.fromInt(int key) {
-    return values.firstWhere((element) => element.value == key);
-  }
-}
-
-enum HashAlgorithm {
-  Md2(0), // Blacklisted
-  Md5(1), // Blacklisted
-  Sha1(2), // Blacklisted
-  Sha224(3),
-  Sha256(4),
-  Sha384(5),
-  Sha512(6),
-  Ed25519(8),
-  unsupported(255),
-  sha256(2);
-
-  const HashAlgorithm(this.value);
-  final int value;
-
-  factory HashAlgorithm.fromInt(int key) {
-    return values.firstWhere((element) => element.value == key);
-  }
-}
-
-// enum SignatureAlgorithm {
-//   Rsa(1),
-//   Ecdsa(3),
-//   Ed25519(7),
-//   unsupported(255);
-
-//   const SignatureAlgorithm(this.value);
-//   final int value;
-
-//   factory SignatureAlgorithm.fromInt(int key) {
-//     return values.firstWhere((element) => element.value == key);
-//   }
-// }
-
-// class SignatureHashAlgorithm {
-//   final HashAlgorithm hash;
-//   final SignatureAlgorithm signature;
-
-//   SignatureHashAlgorithm({required this.hash, required this.signature});
-// }
 
 void main() {
   // Example usage
   final handshake = ServerKeyExchange(
     identityHint: [1, 2, 3],
     ellipticCurveType: EllipticCurveType.NamedCurve,
-    namedCurve: NamedCurve.X25519,
+    namedCurve: NamedCurve.x25519,
     publicKey: raw_server_key_exchange.sublist(4, 69), // Example public key
     algorithm: SignatureHashAlgorithm(
       hash: HashAlgorithm.sha256,
@@ -236,10 +160,9 @@ void main() {
   //print('Marshalled Data: $marshalledData');
 
   // Unmarshal the byte array
-  final unmarshalled =
-      ServerKeyExchange.unmarshal(raw_server_key_exchange);
-  //print('Signature: ${unmarshalled.signature}');
-  //print('expected:  ${raw_server_key_exchange.sublist(73, 144)}');
+  final unmarshalled = ServerKeyExchange.unmarshal(raw_server_key_exchange);
+  print('Signature: ${unmarshalled.signature}');
+  print('expected:  ${raw_server_key_exchange.sublist(73, 144)}');
 //   print("""
 // """);
 

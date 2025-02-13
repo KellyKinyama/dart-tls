@@ -45,15 +45,15 @@ class ClientKeyExchange {
 
   // Unmarshal from byte array
   static ClientKeyExchange unmarshal(Uint8List data) {
-    print("Client key exchange data: $data");
+    // print("Client key exchange data: $data");
     int pskLength = ((data[0] << 8) | data[1]);
 
     if (pskLength > data.length - 2) {
       throw "errBufferTooSmall";
     }
 
-    print("Data length: ${data.length}");
-    print("PSK length: ${pskLength + 2}");
+    // print("Data length: ${data.length}");
+    // print("PSK length: ${pskLength + 2}");
     if (data.length == pskLength + 2) {
       return ClientKeyExchange(
         identityHint: data.sublist(2),
@@ -94,11 +94,7 @@ class ClientKeyExchange {
 
   static (ClientKeyExchange, int, bool?) decode(
       Uint8List buf, int offset, int arrayLen) {
-    return (
-      ClientKeyExchange.unmarshal(buf.sublist(offset)),
-      offset,
-      null
-    );
+    return (ClientKeyExchange.unmarshal(buf.sublist(offset)), offset, null);
   }
 }
 

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../crypto.dart';
 import 'extension.dart';
 import 'handshake.dart';
 import 'tls_random.dart';
@@ -12,8 +13,9 @@ class ClientHello {
   TlsRandom random;
   int session_id_length;
   List<int> session_id;
+  Uint8List cookie;
   int cipher_suites_length;
-  List<int> cipher_suites;
+  List<CipherSuiteId> cipher_suites;
   int compression_methods_length;
   List<int> compression_methods;
   Map<ExtensionType, Extension> extensions;
@@ -23,32 +25,34 @@ class ClientHello {
       this.random,
       this.session_id_length,
       this.session_id,
+      this.cookie,
       this.cipher_suites_length,
       this.cipher_suites,
       this.compression_methods_length,
       this.compression_methods,
       this.extensions);
 
-  static ClientHello unmarshal(Uint8List data, int offset) {
+  static (ClientHello, int, bool?) unmarshal(
+      Uint8List data, int offset, int arrayLen) {
     var reader = ByteData.sublistView(data);
 
     final client_version =
         ProtocolVersion(reader.getUint8(offset), reader.getUint8(offset + 1));
     offset += 2;
-    print("Protocol version: $client_version");
+    // print("Protocol version: $client_version");
 
     final random = TlsRandom.fromBytes(data, offset);
     offset += 32;
 
     final session_id_length = reader.getUint8(offset);
     offset += 1;
-    print("Session id length: $session_id_length");
+    // print("Session id length: $session_id_length");
 
     final session_id = session_id_length > 0
         ? data.sublist(offset, offset + session_id_length)
         : Uint8List(0);
     offset += session_id.length;
-    print("Session id: $session_id");
+    // print("Session id: $session_id");
 
     final cookieLength = data[offset];
     offset += 1;
@@ -59,49 +63,56 @@ class ClientHello {
     var (cipherSuiteIds, decodedOffset, _) =
         decodeCipherSuiteIDs(data, offset, data.length);
 
-    print(
-        "Offset: $offset, decordedOffest:$decodedOffset, arrayLen: ${data.length}");
+    // print(
+    // "Offset: $offset, decordedOffest:$decodedOffset, arrayLen: ${data.length}");
 
     offset = decodedOffset;
 
-    print("Cipher suite IDs: $cipherSuiteIds");
+    // print("Cipher suite IDs: $cipherSuiteIds");
 
     var (compression_methods, dof, _) =
         decodeCompressionMethodIDs(data, offset, data.length);
     offset = dof;
 
-    print("Compression methods: $compression_methods");
+    // print("Compression methods: $compression_methods");
 
     final extensions = decodeExtensionMap(data, offset, data.length);
-    print("extensions: $extensions");
+    // print("extensions: $extensions");
 
-    return ClientHello(
-        client_version,
-        random,
-        session_id_length,
-        session_id,
-        cipherSuiteIds.length,
-        cipherSuiteIds,
-        compression_methods.length,
-        compression_methods,
-        extensions);
+    return (
+      ClientHello(
+          client_version,
+          random,
+          session_id_length,
+          session_id,
+          cookie,
+          cipherSuiteIds.length,
+          cipherSuiteIds,
+          compression_methods.length,
+          compression_methods,
+          extensions),
+      offset,
+      null
+    );
   }
 
-  static (List<int>, int, bool?) decodeCipherSuiteIDs(
+  static (List<CipherSuiteId>, int, bool?) decodeCipherSuiteIDs(
       Uint8List buf, int offset, int arrayLen) {
     final length =
         ByteData.sublistView(buf, offset, offset + 2).getUint16(0, Endian.big);
     final count = length / 2;
     offset += 2;
 
-    print("Cipher suite length: $length");
+    // print("Cipher suite length: $length");
 
-    List<int> result = List.filled(count.toInt(), 0);
+    List<CipherSuiteId> result =
+        List.filled(count.toInt(), CipherSuiteId.Unsupported);
     for (int i = 0; i < count.toInt(); i++) {
-      result[i] = ByteData.sublistView(buf, offset, offset + 2)
-          .getUint16(0, Endian.big);
+      result[i] = CipherSuiteId.fromInt(
+          ByteData.sublistView(buf, offset, offset + 2)
+              .getUint16(0, Endian.big));
       offset += 2;
-      print("cipher suite: ${result[i]}");
+      // print("cipher suite: ${result[i]}");
     }
 
     // print("Cipher suites: $result");
@@ -120,10 +131,20 @@ class ClientHello {
 
     return (result, offset, null);
   }
+
+  String cipherSuitesToString(List<int> cipherSuites) {
+    return cipherSuites.map((e) => e.toString()).join(", ");
+  }
+
+  @override
+  String toString() {
+    // TODO: implement toString
+    return "ClientHello(client_version: $client_version, random: $random, session_id_length: $session_id_length, session_id: $session_id, cipher_suites_length: $cipher_suites_length, cipher_suites: ${cipher_suites}, compression_methods_length: $compression_methods_length, compression_methods: $compression_methods, extensions: $extensions)";
+  }
 }
 
 void main() {
-  ClientHello.unmarshal(raw_client_hello, 0);
+  ClientHello.unmarshal(raw_client_hello, 0, raw_client_hello.length);
 }
 
 final raw_client_hello = Uint8List.fromList([

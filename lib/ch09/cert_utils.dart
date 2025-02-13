@@ -4,8 +4,60 @@ import 'package:basic_utils/basic_utils.dart';
 import 'package:cryptography/cryptography.dart' as cryptography;
 import 'package:asn1lib/asn1lib.dart' as asn;
 
+import 'dart:convert';
+import 'dart:math';
+import 'dart:typed_data';
+
+import 'package:pointycastle/asn1.dart';
+import 'package:pointycastle/export.dart';
+
+void ecSignature() {
+  // the private key
+  // ECPrivateKey? privateKey;
+
+  var keyPair = CryptoUtils.generateEcKeyPair(curve: 'prime256v1');
+  var privateKey = keyPair.privateKey as ECPrivateKey;
+  // var publicKey = keyPair.publicKey as ECPublicKey;
+
+  // some bytes to sign
+  final bytes = Uint8List(0);
+
+  // a suitable random number generator - create it just once and reuse
+  final rand = Random.secure();
+  final fortunaPrng = FortunaRandom()
+    ..seed(KeyParameter(Uint8List.fromList(List<int>.generate(
+      32,
+      (_) => rand.nextInt(256),
+    ))));
+
+  // the ECDSA signer using SHA-256
+  final signer = ECDSASigner(SHA256Digest())
+    ..init(
+      true,
+      ParametersWithRandom(
+        PrivateKeyParameter(privateKey!),
+        fortunaPrng,
+      ),
+    );
+
+  // sign the bytes
+  final ecSignature = signer.generateSignature(bytes) as ECSignature;
+
+  // encode the two signature values in a common format
+  // hopefully this is what the server expects
+  final encoded = ASN1Sequence(elements: [
+    ASN1Integer(ecSignature.r),
+    ASN1Integer(ecSignature.s),
+  ]).encode();
+
+  // and finally base 64 encode it
+  final signature = base64UrlEncode(encoded);
+
+  print("signature: $signature");
+}
+
 /// Generates an EC key pair, a self-signed certificate, and retrieves their PEM and byte formats.
-void generateKeysAndCertificate() {
+String generateKeysAndCertificate() {
   // Generate an EC (Elliptic Curve) key pair
   // prime256v1
   var keyPair = CryptoUtils.generateEcKeyPair(curve: 'prime256v1');
@@ -55,6 +107,66 @@ void generateKeysAndCertificate() {
   // print('Private Key (Bytes): $privateKeyBytes');
   // print('Public Key (Bytes): $publicKeyBytes');
   // print('Certificate (Bytes): $certificateBytes');
+
+  return certificatePem;
+}
+
+({Uint8List privateKey, Uint8List publicKey}) generateKeys() {
+  // Generate an EC (Elliptic Curve) key pair
+  // prime256v1
+  var keyPair = CryptoUtils.generateEcKeyPair(curve: 'prime256v1');
+  var privateKey = keyPair.privateKey as ECPrivateKey;
+  var publicKey = keyPair.publicKey as ECPublicKey;
+
+  // // Encode private key to PEM
+  String privateKeyPem = CryptoUtils.encodeEcPrivateKeyToPem(privateKey);
+
+  // // Encode public key to PEM
+  String publicKeyPem = CryptoUtils.encodeEcPublicKeyToPem(publicKey);
+
+  // // Print PEM values
+  // print('Private Key (PEM):\n$privateKeyPem');
+  // print('Public Key (PEM):\n$publicKeyPem');
+  // print('Certificate (PEM):\n$certificatePem');
+
+  // // Print raw byte values
+  // print('Private Key (Bytes): $privateKeyBytes');
+  // print('Public Key (Bytes): $publicKeyBytes');
+  // print('Certificate (Bytes): $certificateBytes');
+
+  return (
+    privateKey: Uint8List.fromList(pemToBytes(privateKeyPem)),
+    publicKey: Uint8List.fromList(pemToBytes(publicKeyPem))
+  );
+}
+
+({Uint8List privateKey, Uint8List publicKey}) generateECKeys() {
+  // Generate an EC (Elliptic Curve) key pair
+  // prime256v1
+  var keyPair = CryptoUtils.generateEcKeyPair(curve: 'prime256v1');
+  var privateKey = keyPair.privateKey as ECPrivateKey;
+  var publicKey = keyPair.publicKey as ECPublicKey;
+
+  // // Encode private key to PEM
+  String privateKeyPem = CryptoUtils.encodeEcPrivateKeyToPem(privateKey);
+
+  // // Encode public key to PEM
+  String publicKeyPem = CryptoUtils.encodeEcPublicKeyToPem(publicKey);
+
+  // // Print PEM values
+  // print('Private Key (PEM):\n$privateKeyPem');
+  // print('Public Key (PEM):\n$publicKeyPem');
+  // print('Certificate (PEM):\n$certificatePem');
+
+  // // Print raw byte values
+  // print('Private Key (Bytes): $privateKeyBytes');
+  // print('Public Key (Bytes): $publicKeyBytes');
+  // print('Certificate (Bytes): $certificateBytes');
+
+  return (
+    privateKey: Uint8List.fromList(pemToBytes(privateKeyPem)),
+    publicKey: Uint8List.fromList(pemToBytes(publicKeyPem))
+  );
 }
 
 /// Converts a PEM string to raw bytes by decoding the Base64 content.
@@ -218,27 +330,29 @@ void extractPrivateKey(String privateKeyPem) {
 void main() {
   //generateKeysAndCertificate();
 
-  String cert = """-----BEGIN CERTIFICATE-----
-MIIBTjCB8qADAgECAgEBMAwGCCqGSM49BAMCBQAwFjEUMBIGA1UEAxMLU2VsZi1T
-aWduZWQwHhcNMjUwMTI4MDY1NzA3WhcNMjYwMTI4MDY1NzA3WjAWMRQwEgYDVQQD
-EwtTZWxmLVNpZ25lZDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABBGfEeWNMKbz
-3xlE9UP592dbmLPvVfx46Dv/SKFAYU4yAlJ9GbRaqEh0DhCCHkxrsyZiegcYC7UD
-0bHENPG8mL2jLzAtMAwGA1UdDwQFAwMBpAEwHQYDVR0lBBYwFAYIKwYBBQUHAwEG
-CCsGAQUFBwMCMAwGCCqGSM49BAMCBQADSQAwRgIhAI/vyfiKa0WFovjA8yzBx9TT
-tTa3t6dUouQApdo+itegAiEA4yB74rWR45HWz0C+PEnp1aAMajQsAjgoBA/ZPHwh
-7AY=
------END CERTIFICATE-----""";
+//   String cert = """-----BEGIN CERTIFICATE-----
+// MIIBTjCB8qADAgECAgEBMAwGCCqGSM49BAMCBQAwFjEUMBIGA1UEAxMLU2VsZi1T
+// aWduZWQwHhcNMjUwMTI4MDY1NzA3WhcNMjYwMTI4MDY1NzA3WjAWMRQwEgYDVQQD
+// EwtTZWxmLVNpZ25lZDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABBGfEeWNMKbz
+// 3xlE9UP592dbmLPvVfx46Dv/SKFAYU4yAlJ9GbRaqEh0DhCCHkxrsyZiegcYC7UD
+// 0bHENPG8mL2jLzAtMAwGA1UdDwQFAwMBpAEwHQYDVR0lBBYwFAYIKwYBBQUHAwEG
+// CCsGAQUFBwMCMAwGCCqGSM49BAMCBQADSQAwRgIhAI/vyfiKa0WFovjA8yzBx9TT
+// tTa3t6dUouQApdo+itegAiEA4yB74rWR45HWz0C+PEnp1aAMajQsAjgoBA/ZPHwh
+// 7AY=
+// -----END CERTIFICATE-----""";
 
-  String pubkey = """-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEZ8R5Y0wpvPfGUT1Q/n3Z1uYs+9V
-/HjoO/9IoUBhTjICUn0ZtFqoSHQOEIIeTGuzJmJ6BxgLtQPRscQ08byYvQ==
------END PUBLIC KEY-----""";
+//   String pubkey = """-----BEGIN PUBLIC KEY-----
+// MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEZ8R5Y0wpvPfGUT1Q/n3Z1uYs+9V
+// /HjoO/9IoUBhTjICUn0ZtFqoSHQOEIIeTGuzJmJ6BxgLtQPRscQ08byYvQ==
+// -----END PUBLIC KEY-----""";
 
-  String privkey = """-----BEGIN EC PRIVATE KEY-----
-MHcCAQEEIIuFDM6WKrthMfcCCtzgJZOnyQuWUeBWie3VJ/jmSlzLoAoGCCqGSM49
-AwEHoUQDQgAEEZ8R5Y0wpvPfGUT1Q/n3Z1uYs+9V/HjoO/9IoUBhTjICUn0ZtFqo
-SHQOEIIeTGuzJmJ6BxgLtQPRscQ08byYvQ==
------END EC PRIVATE KEY-----""";
-  extractPublicKey(pubkey);
-  extractPrivateKey(privkey);
+//   String privkey = """-----BEGIN EC PRIVATE KEY-----
+// MHcCAQEEIIuFDM6WKrthMfcCCtzgJZOnyQuWUeBWie3VJ/jmSlzLoAoGCCqGSM49
+// AwEHoUQDQgAEEZ8R5Y0wpvPfGUT1Q/n3Z1uYs+9V/HjoO/9IoUBhTjICUn0ZtFqo
+// SHQOEIIeTGuzJmJ6BxgLtQPRscQ08byYvQ==
+// -----END EC PRIVATE KEY-----""";
+//   extractPublicKey(pubkey);
+//   extractPrivateKey(privkey);
+
+  ecSignature();
 }

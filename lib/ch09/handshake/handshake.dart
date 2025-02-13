@@ -252,11 +252,11 @@ enum AlertDescription {
   final int value;
 }
 
-class Alert {
-  int level;
-  int description;
-  Alert(this.level, this.description);
-}
+// class Alert {
+//   int level;
+//   int description;
+//   Alert(this.level, this.description);
+// }
 
 class ProtocolVersion {
   int major, minor;
@@ -297,6 +297,7 @@ enum HandshakeType {
   hello_request(0),
   client_hello(1),
   server_hello(2),
+  hello_verify_request(3),
   certificate(11),
   server_key_exchange(12),
   certificate_request(13),
@@ -322,18 +323,18 @@ class Handshake {
   Handshake(this.msg_type, this.length);
 }
 
-class ServerHello {
-  ProtocolVersion server_version;
-  TlsRandom random;
-  int session_id_length;
-  List<int> session_id =
-      List.filled(32, 0); // technically, this len should be dynamic.
-  int cipher_suite;
-  int compression_method;
+// class ServerHello {
+//   ProtocolVersion server_version;
+//   TlsRandom random;
+//   int session_id_length;
+//   List<int> session_id =
+//       List.filled(32, 0); // technically, this len should be dynamic.
+//   int cipher_suite;
+//   int compression_method;
 
-  ServerHello(this.server_version, this.random, this.session_id_length,
-      this.session_id, this.cipher_suite, this.compression_method);
-}
+//   ServerHello(this.server_version, this.random, this.session_id_length,
+//       this.session_id, this.cipher_suite, this.compression_method);
+// }
 
 // /**
 //  * Negotiate an TLS channel on an already-established connection

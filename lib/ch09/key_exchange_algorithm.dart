@@ -2,12 +2,14 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:dart_tls/ch09/ecdsa_example.dart';
 import 'package:hex/hex.dart';
 import 'package:x25519/x25519.dart';
 import 'package:collection/collection.dart';
-
+import 'package:cryptography/cryptography.dart' as cryptography;
 import 'package:elliptic/elliptic.dart';
 
+import 'crypto.dart';
 import 'ecdsa3.dart';
 import 'hex2.dart';
 import 'prf2.dart';
@@ -44,35 +46,35 @@ enum ECCurveType {
 //   final int value;
 // }
 
-enum NamedCurve {
-  prime256v1(0x0017),
-  prime384v1(0x0018),
-  prime521v1(0x0019),
-  x25519(0x001D),
-  x448(0x001E),
-  ffdhe2048(0x0100),
-  ffdhe3072(0x0101),
-  ffdhe4096(0x0102),
-  ffdhe6144(0x0103),
-  ffdhe8192(0x0104),
-  secp256k1(0x0012);
-  // secp256r1(0x0017),
-  // secp384r1(0x0018),
-  // secp521r1(0x0019),
-  // secp256k1(0x0012),
-  // secp256r1(0x0017),
-  // secp384r1(0x0018),
-  // secp521r1(0x0019),
-  // secp256k1(0x0012),
-  // secp256r1(0x0017),
+// enum NamedCurve {
+//   prime256v1(0x0017),
+//   prime384v1(0x0018),
+//   prime521v1(0x0019),
+//   x25519(0x001D),
+//   x448(0x001E),
+//   ffdhe2048(0x0100),
+//   ffdhe3072(0x0101),
+//   ffdhe4096(0x0102),
+//   ffdhe6144(0x0103),
+//   ffdhe8192(0x0104),
+//   secp256k1(0x0012);
+//   // secp256r1(0x0017),
+//   // secp384r1(0x0018),
+//   // secp521r1(0x0019),
+//   // secp256k1(0x0012),
+//   // secp256r1(0x0017),
+//   // secp384r1(0x0018),
+//   // secp521r1(0x0019),
+//   // secp256k1(0x0012),
+//   // secp256r1(0x0017),
 
-  const NamedCurve(this.value);
-  final int value;
+//   const NamedCurve(this.value);
+//   final int value;
 
-  factory NamedCurve.fromInt(int key) {
-    return values.firstWhere((element) => element.value == key);
-  }
-}
+//   factory NamedCurve.fromInt(int key) {
+//     return values.firstWhere((element) => element.value == key);
+//   }
+// }
 
 // enum ECCurve { X25519, X448, Curve25519, Curve448 }
 
@@ -96,7 +98,7 @@ Uint8List generateKeyValueMessages(Uint8List clientRandom,
     Uint8List serverRandom, Uint8List publicKey, Uint8List privateKey) {
   ByteData serverECDHParams = ByteData(4);
   serverECDHParams.setUint8(0, ECCurveType.Named_Curve.value);
-  serverECDHParams.setUint16(1, NamedCurve.x25519.value);
+  serverECDHParams.setUint16(1, NamedCurve.prime256v1.value);
   serverECDHParams.setUint8(3, publicKey.length);
 
   final bb = BytesBuilder();
@@ -119,9 +121,38 @@ Uint8List generateKeyValueMessages(Uint8List clientRandom,
 
   return (
     privateKey: Uint8List.fromList(priv.bytes),
-    publicKey: Uint8List.fromList(hexDecode(pub.toHex()))
+    publicKey: Uint8List.fromList(hexDecode(pub.toCompressedHex()))
   );
 }
+
+// Future<({Uint8List privateKey, Uint8List publicKey})> generateP256Keys() async {
+//   // In this example, we use ECDSA-P256-SHA256
+//   final algorithm = cryptography.Ecdsa.p256(cryptography.Sha256());
+
+//   // Generate a random key pair
+//   final kepair = await algorithm.newKeyPair();
+//   final publicKey = await kepair.extractPublicKey();
+
+//   final priv = await kepair.extract();
+
+//   // Sign a message
+//   // final message = <int>[1, 2, 3];
+//   // final signature = await algorithm.sign(
+//   //   [1, 2, 3],
+//   //   secretKey: secretKey,
+//   // );
+
+//   // // Anyone can verify the signature
+//   // final isVerified = await algorithm.verify(
+//   //   message: message,
+//   //   signature: signature,
+//   // );
+
+//   return (
+//     privateKey: Uint8List.fromList(priv.d),
+//     publicKey: Uint8List.fromList(publicKey.toDer())
+//   );
+// }
 
 ({Uint8List privateKey, Uint8List publicKey}) generateX25519Keys() {
   var aliceKeyPair = generateKeyPair();

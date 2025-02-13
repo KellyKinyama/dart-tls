@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:dart_tls/ch09/dtls_state.dart';
 import 'package:dart_tls/ch09/enums.dart';
+import 'package:dart_tls/ch09/handshake/extension.dart';
 import 'package:dart_tls/ch09/handshake/handshake.dart';
 
 import 'tls_random.dart';
@@ -60,6 +61,14 @@ class HandshakeContext {
   late bool UseExtendedMasterSecret;
 
   late int srtpProtectionProfile;
+
+  int clientEpoch = 0;
+
+  late Uint8List session_id;
+
+  Map<ExtensionType, Extension> extensions = {};
+
+  var compression_methods;
   void increaseServerEpoch() {
     serverEpoch++;
   }

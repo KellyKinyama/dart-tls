@@ -1,39 +1,30 @@
 import 'dart:io';
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:dart_tls/ch09/handshake/handshake.dart';
-import 'package:dart_tls/ch09/handshake/server_key_exchange.dart';
 
-import '../cert_utils.dart';
-import '../crypto.dart';
-import '../dtls_message.dart';
-import '../dtls_state.dart';
-import '../enums.dart';
-import '../handshake/certificate.dart';
-import '../handshake/certificate_verify.dart';
-import '../handshake/client_hello.dart';
-import '../handshake/client_key_exchange.dart';
-import '../handshake/extension.dart';
-import '../handshake/finished.dart';
-import '../handshake/handshake_context.dart';
-import '../handshake/handshake_header.dart';
-import '../handshake/hello_verify_request.dart';
-import '../handshake/server_hello.dart';
-import '../handshake/server_hello_done.dart';
-import '../handshake/tls_random.dart';
-import '../key_exchange_algorithm.dart';
-import '../record_layer_header.dart';
+import '../../ch09/cert_utils.dart';
+import '../../ch09/dtls_message.dart';
+import '../../ch09/dtls_state.dart';
+import '../../ch09/enums.dart';
+import '../../ch09/handshake/certificate.dart';
+import '../../ch09/handshake/certificate_verify.dart';
+import '../../ch09/handshake/client_hello.dart';
+import '../../ch09/handshake/client_key_exchange.dart';
+import '../../ch09/handshake/extension.dart';
+import '../../ch09/handshake/finished.dart';
+import '../../ch09/handshake/handshake_context.dart';
+import '../../ch09/handshake/tls_random.dart';
+import '../../ch09/key_exchange_algorithm.dart';
 
 HandshakeContext context = HandshakeContext();
 
 class HandshakeManager {
   Uint8List serverCertificate = Uint8List(0);
 
-  RawDatagramSocket socket;
   late int port;
 
-  HandshakeManager(this.socket);
+  HandshakeManager(ServerSocket socket);
 
   Uint8List concatHandshakeMessageTo(
       Uint8List result,
@@ -139,27 +130,18 @@ class HandshakeManager {
     final dtlsMsg =
         DecodeDtlsMessageResult.decode(context, data, 0, data.length);
 
-    // print("dtls message: $dtlsMsg");
-    ProcessIncomingMessage(context, dtlsMsg);
+    print("dtls message: $dtlsMsg");
   }
 
-  Future<bool?> ProcessIncomingMessage(
-      HandshakeContext context, DecodeDtlsMessageResult incomingMessage) async {
-    final (message, _, _) = incomingMessage.message;
-
-    print("Message runtime type: ${message.runtimeType}");
+  bool? ProcessIncomingMessage(
+      HandshakeContext context, DecodeDtlsMessageResult incomingMessage) {
+    final message = incomingMessage.message;
     switch (message.runtimeType) {
       case ClientHello:
-        message as ClientHello;
-
-        context.session_id = Uint8List.fromList(message.session_id);
-        context.compression_methods = message.compression_methods;
-        context.extensions = message.extensions;
-
         switch (context.flight) {
           case Flight.Flight0:
             context.dTLSState = DTLSState.DTLSStateConnecting;
-            context.protocolVersion = message.client_version;
+            context.protocolVersion = message.version;
             context.cookie = generateDtlsCookie();
             // logging.Descf(logging.ProtoDTLS, "DTLS Cookie was generated and set to <u>0x%x</u> in handshake context (<u>%d bytes</u>).", context.Cookie, len(context.Cookie))
 
@@ -182,38 +164,35 @@ class HandshakeManager {
             // 	throw ("client hello cookie is invalid");
             // }
             final negotiatedCipherSuite =
-                negotiateOnCipherSuiteIDs(message.cipher_suites);
+                negotiateOnCipherSuiteIDs(message.cipherSuiteIDs);
             // if (err != nil {
             // 	return m.setStateFailed(context, err)
             // }
-            context.cipherSuite = negotiatedCipherSuite.value;
+            context.cipherSuite = negotiatedCipherSuite;
             // //logging.Descf(//logging.ProtoDTLS, "Negotiation on cipher suites: Client sent a list of cipher suites, server selected one of them (mutually supported), and assigned in handshake context: %s", negotiatedCipherSuite)
-            // Convert map entries to a list
-            final extensionList = message.extensions.entries.toList();
-
-            for (var extensionItem in extensionList) {
-              // print("Extension runtime type: ${extensionItem.runtimeType}");
-              // switch (extensionItem) {
-              //   case ExtensionType.ExtensionTypeSupportedEllipticCurves:
-              //     final negotiatedCurve = negotiateOnCurves(extensionItem);
-              //     // if err != nil {
-              //     // 	return m.setStateFailed(context, err)
-              //     // }
-              //     context.curve = negotiatedCurve;
-              //   //logging.Descf(//logging.ProtoDTLS, "Negotiation on curves: Client sent a list of curves, server selected one of them (mutually supported), and assigned in handshake context: <u>%s</u>", negotiatedCurve)
-              //   case ExtensionType.ExtensionTypeUseSRTP:
-              //     final negotiatedProtectionProfile =
-              //         negotiateOnSRTPProtectionProfiles(
-              //             extensionItem.ProtectionProfiles);
-              //     // if err != nil {
-              //     // 	return m.setStateFailed(context, err)
-              //     // }
-              //     context.srtpProtectionProfile = negotiatedProtectionProfile;
-              //   //logging.Descf(//logging.ProtoDTLS, "Negotiation on SRTP protection profiles: Client sent a list of SRTP protection profiles, server selected one of them (mutually supported), and assigned in handshake context: <u>%s</u>", negotiatedProtectionProfile)
-              //   case ExtensionType.ExtensionTypeUseExtendedMasterSecret:
-              //     context.UseExtendedMasterSecret = true;
-              //   //logging.Descf(//logging.ProtoDTLS, "Client sent UseExtendedMasterSecret extension, client wants to use ExtendedMasterSecret. We will generate the master secret via extended way further.")
-              // }
+            for (var extensionItem in message.extensions) {
+              switch (extensionItem) {
+                case ExtensionType.ExtensionTypeSupportedEllipticCurves:
+                  final negotiatedCurve =
+                      negotiateOnCurves(extensionItem.curves);
+                  // if err != nil {
+                  // 	return m.setStateFailed(context, err)
+                  // }
+                  context.curve = negotiatedCurve;
+                //logging.Descf(//logging.ProtoDTLS, "Negotiation on curves: Client sent a list of curves, server selected one of them (mutually supported), and assigned in handshake context: <u>%s</u>", negotiatedCurve)
+                case ExtensionType.ExtensionTypeUseSRTP:
+                  final negotiatedProtectionProfile =
+                      negotiateOnSRTPProtectionProfiles(
+                          extensionItem.ProtectionProfiles);
+                  // if err != nil {
+                  // 	return m.setStateFailed(context, err)
+                  // }
+                  context.srtpProtectionProfile = negotiatedProtectionProfile;
+                //logging.Descf(//logging.ProtoDTLS, "Negotiation on SRTP protection profiles: Client sent a list of SRTP protection profiles, server selected one of them (mutually supported), and assigned in handshake context: <u>%s</u>", negotiatedProtectionProfile)
+                case ExtensionType.ExtensionTypeUseExtendedMasterSecret:
+                  context.UseExtendedMasterSecret = true;
+                //logging.Descf(//logging.ProtoDTLS, "Client sent UseExtendedMasterSecret extension, client wants to use ExtendedMasterSecret. We will generate the master secret via extended way further.")
+              }
             }
 
             context.clientRandom = message.random;
@@ -222,7 +201,7 @@ class HandshakeManager {
             // context.serverRandom.generate();
             //logging.Descf(//logging.ProtoDTLS, "We generated Server Random, set to <u>0x%x</u> in handshake context.", context.ServerRandom.Encode())
 
-            var keys = generateP256Keys();
+            var keys = generateKeys();
             // if err != nil {
             // 	return m.setStateFailed(context, err)
             // }
@@ -249,16 +228,16 @@ class HandshakeManager {
             context.flight = Flight.Flight4;
             //logging.Descf(//logging.ProtoDTLS, "Running into <u>Flight %d</u>.", context.Flight)
             //logging.LineSpacer(2)
-            final serverHelloResponse = createServerHello(context);
+            final serverHelloResponse = createDtlsServerHello(context);
             sendMessage(context, serverHelloResponse);
             final certificateResponse = createDtlsCertificate();
             sendMessage(context, certificateResponse);
             final serverKeyExchangeResponse =
                 createDtlsServerKeyExchange(context);
             sendMessage(context, serverKeyExchangeResponse);
-            // final certificateRequestResponse =
-            //     createDtlsCertificateRequest(context);
-            // sendMessage(context, certificateRequestResponse);
+            final certificateRequestResponse =
+                createDtlsCertificateRequest(context);
+            sendMessage(context, certificateRequestResponse);
             final serverHelloDoneResponse = createDtlsServerHelloDone(context);
             sendMessage(context, serverHelloDoneResponse);
 
@@ -354,46 +333,17 @@ class HandshakeManager {
     }
   }
 
-  ServerKeyExchange createDtlsServerKeyExchange(HandshakeContext context) {
-    return ServerKeyExchange(
-        identityHint: [],
-        ellipticCurveType: EllipticCurveType.NamedCurve,
-        namedCurve: NamedCurve.prime256v1,
-        publicKey: context.serverPublicKey,
-        algorithm: SignatureHashAlgorithm(
-            hash: HashAlgorithm.Sha256, signature: SignatureAlgorithm.Ecdsa),
-        signature: context.serverKeySignature);
-  }
+  createDtlsServerKeyExchange(HandshakeContext context) {}
 
-  Certificate createDtlsCertificate() {
-    return Certificate(certificate: [
-      Uint8List.fromList(pemToBytes(generateKeysAndCertificate()))
-    ]);
-  }
+  createDtlsCertificate() {}
 
-  ServerHello createServerHello(HandshakeContext context) {
-    // final ch = context.HandshakeMessagesReceived[HandshakeType.client_hello]
-    //     as ClientHello;
+  createDtlsServerHello(HandshakeContext context) {}
 
-    return ServerHello(
-        context.protocolVersion,
-        context.serverRandom,
-        context.session_id.length,
-        context.session_id,
-        CipherSuiteId.Tls_Ecdhe_Ecdsa_With_Aes_128_Gcm_Sha256.value,
-        context.compression_methods[0],
-        context.extensions);
-  }
-
-  CipherSuiteId negotiateOnCipherSuiteIDs(List<CipherSuiteId> cipherSuiteIDs) {
-    return CipherSuiteId.Tls_Ecdhe_Ecdsa_With_Aes_128_Gcm_Sha256;
-  }
+  negotiateOnCipherSuiteIDs(cipherSuiteIDs) {}
 
   createDtlsCertificateRequest(HandshakeContext context) {}
 
-  ServerHelloDone createDtlsServerHelloDone(HandshakeContext context) {
-    return ServerHelloDone();
-  }
+  createDtlsServerHelloDone(HandshakeContext context) {}
 
   verifyCertificate(Object? handshakeMessages, hashAlgorithm, signature,
       clientCertificates) {}
@@ -411,57 +361,15 @@ class HandshakeManager {
   //  void increaseServerEpoch() {}
   // }
 
-  void sendMessage(HandshakeContext context, dynamic message) {
-    // print("object type: ${message.runtimeType}");
-    final Uint8List encodedMessageBody = message.marshal();
-    final encodedMessage = BytesBuilder();
-    HandshakeHeader handshakeHeader;
-    switch (message.getContentType()) {
-      case ContentType.content_handshake:
-        // print("message type: ${message.getContentType()}");
-        handshakeHeader = HandshakeHeader(
-            handshakeType: message.getHandshakeType(),
-            length: Uint24.fromUInt32(encodedMessageBody.length),
-            messageSequence: context.serverHandshakeSequenceNumber,
-            fragmentOffset: Uint24.fromUInt32(0),
-            fragmentLength: Uint24.fromUInt32(encodedMessageBody.length));
-        context.increaseServerHandshakeSequence();
-        final encodedHandshakeHeader = handshakeHeader.marshal();
-        encodedMessage.add(encodedHandshakeHeader);
-        encodedMessage.add(encodedMessageBody);
-    }
-
-    final header = RecordLayerHeader(
-        contentType: message.getContentType(),
-        protocolVersion: ProtocolVersion(254, 253),
-        epoch: context.serverEpoch,
-        sequenceNumber: context.serverSequenceNumber,
-        contentLen: encodedMessage.toBytes().length);
-
-    final encodedHeader = header.marshal();
-    final messageToSend = encodedHeader + encodedMessage.toBytes();
-    socket.send(messageToSend, socket.address, port);
-    context.increaseServerSequence();
-  }
+  void sendMessage(HandshakeContext context, finishedResponse) {}
 
   createDtlsFinished(HandshakeContext context, calculatedVerifyData) {}
 
   generateCurveKeypair(Uint8List curve) {}
 
-  HelloVerifyRequest createDtlsHelloVerifyRequest(HandshakeContext context) {
-    HelloVerifyRequest hvr = HelloVerifyRequest(
-        version: context.protocolVersion, cookie: generateDtlsCookie());
-    return hvr;
-  }
+  createDtlsHelloVerifyRequest(HandshakeContext context) {}
 
-  Uint8List generateDtlsCookie() {
-    final cookie = Uint8List(20);
-    final random = Random.secure();
-    for (int i = 0; i < cookie.length; i++) {
-      cookie[i] = random.nextInt(256);
-    }
-    return cookie;
-  }
+  generateDtlsCookie() {}
 
   negotiateOnCurves(curves) {}
   negotiateOnSRTPProtectionProfiles(protectionProfiles) {}

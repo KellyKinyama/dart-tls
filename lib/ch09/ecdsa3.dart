@@ -8,7 +8,7 @@ List<int> ecdsaSign(List<int> privateKeyBytes, List<int> hash) {
 
   final sig = signature(priv, hash);
 
-  final signatureBytes = sig.toCompact();
+  final signatureBytes = sig.toASN1();
 
   return signatureBytes;
 }
@@ -21,12 +21,8 @@ bool ecdsaVerify(
   return result;
 }
 
-
 bool ecdsaVerify2(
     List<int> publicKeyBytes, List<int> hash, List<int> signatureBytes) {
-
-
-      
   final pub = PublicKey.fromHex(getP256(), hexEncode(publicKeyBytes));
   var result = verify(pub, hash, Signature.fromCompact(signatureBytes));
   // print("Is verified: $result");

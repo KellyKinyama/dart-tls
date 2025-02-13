@@ -1,19 +1,21 @@
 import 'dart:typed_data';
 
+import 'handshake.dart';
+
 class Certificate {
   static const int handshakeMessageCertificateLengthFieldSize = 3;
   final List<Uint8List> certificate;
 
   Certificate({required this.certificate});
 
-  // ContentType getContentType() {
-  //   return ContentType.Handshake;
-  // }
+  ContentType getContentType() {
+    return ContentType.content_handshake;
+  }
 
   // Handshake type
-  // HandshakeType getHandshakeType() {
-  //   return HandshakeType.Certificate;
-  // }
+  HandshakeType getHandshakeType() {
+    return HandshakeType.certificate;
+  }
 
   // Calculate size
   int size() {
@@ -117,7 +119,6 @@ void main() {
   //print('Marshalled Data: $marshalledData');
 
   // Unmarshal back to an object
-  final unmarshalledMessage =
-      Certificate.unmarshal(marshalledData);
+  final unmarshalledMessage = Certificate.unmarshal(marshalledData);
   //print('Unmarshalled Message: $unmarshalledMessage');
 }

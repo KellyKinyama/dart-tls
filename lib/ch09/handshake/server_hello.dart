@@ -1,7 +1,10 @@
 import 'dart:typed_data';
 
+import 'package:dart_tls/ch09/crypto.dart';
+
 import 'extension.dart';
 import 'handshake.dart';
+import 'tls_random.dart';
 
 /**
  * Section 7.4.1.2
@@ -24,26 +27,112 @@ class ServerHello {
       this.compression_method,
       this.extensions);
 
-  static ServerHello unmarshal(Uint8List data, int offset) {
+  ContentType getContentType() {
+    return ContentType.content_handshake;
+  }
+
+  HandshakeType getHandshakeType() {
+    return HandshakeType.server_hello;
+  }
+
+  Uint8List encode() {
+    final bb = BytesBuilder();
+    bb.add([client_version.major, client_version.minor]);
+
+    final randomBytes = random.marshal();
+    print("Random bytes length: ${randomBytes.length}");
+    bb.add(randomBytes);
+
+    bb.addByte(session_id.length);
+    print("Session id length: ${session_id.length}");
+    bb.add(session_id);
+
+    bb.add([0x00, 0x00]);
+    // result = append(result, []byte{0x00, 0x00}...)
+    // binary.BigEndian.PutUint16(result[len(result)-2:], uint16(m.CipherSuiteID))
+
+    bb.add(Uint8List(2)
+      ..buffer.asByteData().setUint16(0, cipher_suite, Endian.big));
+
+    bb.addByte(compression_method);
+    bb.add(encodeExtensionMap(extensions));
+
+    // result = append(result, m.CompressionMethodID)
+
+    // encodedExtensions := EncodeExtensionMap(m.Extensions)
+    // result = append(result, encodedExtensions...)
+
+    return bb.toBytes();
+  }
+
+  Uint8List marshal() {
+    final bb = BytesBuilder();
+    // Calculate the total size of the marshaled data
+
+    // Allocate buffer for marshaling
+
+    // Write ProtocolVersion
+    bb.add([client_version.major, client_version.minor]);
+
+    // Write HandshakeRandom
+
+    bb.add(random.marshal());
+
+    // Write Session ID (assuming no session ID, length = 0)
+    bb.addByte(session_id_length);
+    if (session_id.isNotEmpty) bb.add(session_id);
+
+    // Write CipherSuite
+    ByteData bd = ByteData(2);
+    bd.setUint16(0, cipher_suite);
+    bb.add(bd.buffer.asUint8List());
+
+    // Write CompressionMethod
+    bb.addByte(compression_method);
+
+    // Write Extensions
+    bb.add(encodeExtensionMap(extensions));
+
+    // Debug prints to check buffer sizes and offsets
+    // print('Total Size: $totalSize');
+    // print('Offset before setting extensions: $offset');
+    // print('Extensions Buffer Length: ${extensionsBuffer.length}');
+
+    // // Ensure the range is within the buffer size
+    // if (offset + extensionsBuffer.length > totalSize) {
+    //   throw RangeError('Extensions buffer exceeds allocated buffer size');
+    // }
+
+    // writer.buffer
+    //     .asUint8List()
+    //     .setRange(offset, offset + extensionsBuffer.length, extensionsBuffer);
+
+    return bb.toBytes();
+    // Return the marshaled data as Uint8List
+    // return writer.buffer.asUint8List();
+  }
+
+  static (ServerHello, int, bool?) unmarshal(
+      Uint8List data, int offset, int arrayLen) {
     var reader = ByteData.sublistView(data);
 
-    final client_version =
+    final clientVersion =
         ProtocolVersion(reader.getUint8(offset), reader.getUint8(offset + 1));
     offset += 2;
-    print("Protocol version: $client_version");
+    print("Protocol version: $clientVersion");
 
-    final random = TlsRandom.fromBytes(data, offset);
+    final random = TlsRandom.unmarshal(data, offset, data.length);
     offset += 32;
 
     final session_id_length = reader.getUint8(offset);
     offset += 1;
     print("Session id length: $session_id_length");
 
-    final session_id = session_id_length > 0
+    final sessionId = session_id_length > 0
         ? data.sublist(offset, offset + session_id_length)
         : Uint8List(0);
-    offset += session_id.length;
-    print("Session id: $session_id");
+    offset += sessionId.length;
+    print("Session id: $sessionId");
 
     // final cookieLength = data[offset];
     // offset += 1;
@@ -63,47 +152,106 @@ class ServerHello {
     final extensions = decodeExtensionMap(data, offset, data.length);
     print("extensions: $extensions");
 
-    return ServerHello(client_version, random, session_id_length, session_id,
-        cipherSuiteID, ompressionMethodID, extensions);
+    return (
+      ServerHello(clientVersion, random, session_id_length, sessionId,
+          cipherSuiteID, ompressionMethodID, extensions),
+      offset,
+      null
+    );
   }
 
-  static (List<int>, int, bool?) decodeCipherSuiteIDs(
-      Uint8List buf, int offset, int arrayLen) {
-    final length =
-        ByteData.sublistView(buf, offset, offset + 2).getUint16(0, Endian.big);
-    final count = length / 2;
+  Uint8List encodeExtensionMap(Map<ExtensionType, dynamic> extensions) {
+    // Calculate the total length of the encoded extensions
+    int totalLength = extensions.entries.fold(0, (sum, entry) {
+      int extensionLength = entry.value.size();
+      return sum +
+          4 +
+          extensionLength; // 2 bytes for type, 2 bytes for length, and extension data
+    });
+
+    // Create a ByteData buffer to write the encoded extensions
+    ByteData writer = ByteData(2 + totalLength);
+    int offset = 0;
+
+    // Write the total length of the extensions (2 bytes)
+    writer.setUint16(offset, totalLength, Endian.big);
     offset += 2;
 
-    print("Cipher suite length: $length");
-
-    List<int> result = List.filled(count.toInt(), 0);
-    for (int i = 0; i < count.toInt(); i++) {
-      result[i] = ByteData.sublistView(buf, offset, offset + 2)
-          .getUint16(0, Endian.big);
+    // Iterate over the extensions and write each one
+    extensions.forEach((extensionType, extension) {
+      // Write ExtensionType (2 bytes)
+      writer.setUint16(offset, extensionType.value, Endian.big);
       offset += 2;
-      print("cipher suite: ${result[i]}");
-    }
 
-    // print("Cipher suites: $result");
-    return (result, offset, null);
+      // Write the length of the extension data (2 bytes)
+      int extensionLength = extension.size();
+      writer.setUint16(offset, extensionLength, Endian.big);
+      offset += 2;
+
+      // Write the extension data
+      ByteData extensionData = ByteData(extensionLength);
+      //extension.marshal(extensionData);
+      writer.buffer.asUint8List().setRange(
+          offset, offset + extensionLength, extensionData.buffer.asUint8List());
+      offset += extensionLength;
+    });
+
+    return writer.buffer.asUint8List();
   }
 
-  static (List<int>, int, bool?) decodeCompressionMethodIDs(
-      Uint8List buf, int offset, int arrayLen) {
-    final count = buf[offset];
-    offset += 1;
-    List<int> result = List.filled(count.toInt(), 0);
-    for (int i = 0; i < count; i++) {
-      result[i] = ByteData.sublistView(buf, offset, offset + 2).getUint8(0);
-      offset += 1;
-    }
+  // Uint8List encodeExtensionMap(Map<ExtensionType, dynamic> extensions) {
+  //   final bb = BytesBuilder();
+  //   final extensionsToBe = extensions.entries.toList();
+  //   // encodedBody := make([]byte, 0)
+  //   for (final extension in extensionsToBe) {
+  //     final encodedExtension = extension.encode();
+  //     // bb.add(encodedExtension);
 
-    return (result, offset, null);
-  }
+  //     bb.add(Uint8List(2)
+  //       ..buffer
+  //           .asByteData()
+  //           .setUint16(extension.extensionType(), cipher_suite, Endian.big));
+  //     // binary.BigEndian.PutUint16(encodedExtType, uint16(extension.extensionType()))
+  //     // encodedBody = append(encodedBody, encodedExtType...)
+
+  //     // encodedExtLen := make([]byte, 2)
+  //     // binary.BigEndian.PutUint16(encodedExtLen, uint16(len(encodedExtension)))
+
+  //     bb.add(Uint8List(2)
+  //       ..buffer
+  //           .asByteData()
+  //           .setUint16(encodedExtension.length, cipher_suite, Endian.big));
+  //     // encodedBody = append(encodedBody, encodedExtLen...)
+  //     // encodedBody = append(encodedBody, encodedExtension...)
+  //     bb.add(encodedExtension);
+  //   }
+  //   final extensionBytes = bb.toBytes();
+
+  //   bb.add(Uint8List(2)
+  //     ..buffer
+  //         .asByteData()
+  //         .setUint16(extensionBytes.length, cipher_suite, Endian.big));
+
+  //   // binary.BigEndian.PutUint16(result[0:], uint16(len(encodedBody)))
+  //   // result = append(result, encodedBody...)
+  //   return bb.toBytes();
+  // }
 }
 
 void main() {
-  ServerHello.unmarshal(raw_server_hello, 0);
+  final (serverHello, _, _) =
+      ServerHello.unmarshal(raw_server_hello, 0, raw_server_hello.length);
+  print("Server hello: $serverHello");
+
+  print("Got random:      ${serverHello.random.randomBytes}");
+  print("Expected random: $random_bytes");
+
+  print("Got cipher:      ${CipherSuiteId.fromInt(serverHello.cipher_suite)}");
+  print(
+      "Expected cipher: ${CipherSuiteId.Tls_Ecdhe_Ecdsa_With_Aes_128_Gcm_Sha256}");
+
+  print("marshalled Server hello: ${serverHello.marshal()}");
+  print("Expected:                $raw_server_hello");
 }
 
 final raw_server_hello = Uint8List.fromList([
@@ -147,4 +295,35 @@ final raw_server_hello = Uint8List.fromList([
   0x00,
   0x00,
   0x00,
+]);
+
+final random_bytes = Uint8List.fromList([
+  0x81,
+  0x0e,
+  0x98,
+  0x6c,
+  0x85,
+  0x3d,
+  0xa4,
+  0x39,
+  0xaf,
+  0x5f,
+  0xd6,
+  0x5c,
+  0xcc,
+  0x20,
+  0x7f,
+  0x7c,
+  0x78,
+  0xf1,
+  0x5f,
+  0x7e,
+  0x1c,
+  0xb7,
+  0xa1,
+  0x1e,
+  0xcf,
+  0x63,
+  0x84,
+  0x28,
 ]);

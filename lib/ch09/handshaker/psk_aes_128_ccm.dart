@@ -1,11 +1,78 @@
+// what is the flow of handshake messages for this cipher suite between server and client: Tls_Psk_With_Aes_128_Ccm
+// ChatGPT said:
+// The TLS 1.2 handshake for the cipher suite TLS_PSK_WITH_AES_128_CCM follows a simplified Pre-Shared Key (PSK) handshake flow because it does not use public-key cryptography (e.g., certificates or key exchange mechanisms like ECDHE). Instead, both the client and server use a pre-shared key (PSK) to establish a secure connection.
+
+// 🛠 TLS 1.2 PSK Handshake Flow (TLS_PSK_WITH_AES_128_CCM)
+// Client ↔ Server Handshake Message Flow
+// ClientHello → (Client → Server)
+
+// Proposes supported cipher suites, including TLS_PSK_WITH_AES_128_CCM.
+// Includes a random number (ClientRandom).
+// Includes a PSK identity hint (optional, tells the server which PSK to use).
+// ServerHello → (Server → Client)
+
+// Selects TLS 1.2 and TLS_PSK_WITH_AES_128_CCM as the cipher suite.
+// Includes a random number (ServerRandom).
+// ServerHelloDone → (Server → Client)
+
+// Informs the client that the server's hello messages are complete.
+// ClientKeyExchange → (Client → Server)
+
+// Includes the PSK identity (which tells the server which PSK to use).
+// No actual key exchange occurs (since the PSK is already shared).
+// ChangeCipherSpec → (Client → Server)
+
+// Client tells the server: "I'm switching to encrypted mode now."
+// Finished → (Client → Server)
+
+// Sends a hashed MAC (Message Authentication Code) to verify handshake integrity.
+// Encrypted using the negotiated session key derived from PSK.
+// ChangeCipherSpec → (Server → Client)
+
+// Server switches to encrypted mode.
+// Finished → (Server → Client)
+
+// Server verifies handshake integrity.
+// ✔️ Secure connection established! 🎉
+
+// From this point onward, all communication is encrypted using AES-128-CCM.
+// 🔍 Key Differences from Regular TLS Handshakes
+// ✅ No certificate exchange (since no asymmetric cryptography is used).
+// ✅ No Diffie-Hellman or ECDHE key exchange (session key is derived from PSK).
+// ✅ Faster handshake (fewer messages, no expensive crypto operations).
+// ✅ Lower computational cost (good for embedded devices and IoT).
+
+// ⚠️ Security Considerations:
+
+// The PSK must be kept secret (if compromised, anyone can decrypt the session).
+// Not Forward Secret ⚠️ (if PSK is leaked, past sessions can be decrypted).
+// Typically used in IoT, constrained devices, or pre-configured secure environments.
+// 📌 Example Wireshark Capture of a PSK Handshake
+// If you capture this handshake in Wireshark, you’ll see:
+
+// ClientHello → ServerHello (TLS version, cipher selection)
+// ClientKeyExchange (PSK Identity)
+// ChangeCipherSpec & Finished
+// Encrypted Application Data
+// 📢 Summary
+// Step	Message	Description
+// 1	ClientHello	Client sends supported cipher suites and PSK identity hint.
+// 2	ServerHello	Server selects TLS_PSK_WITH_AES_128_CCM cipher.
+// 3	ServerHelloDone	Server signals completion of Hello phase.
+// 4	ClientKeyExchange	Client sends PSK identity.
+// 5	ChangeCipherSpec (Client)	Client switches to encrypted mode.
+// 6	Finished (Client)	Client verifies handshake.
+// 7	ChangeCipherSpec (Server)	Server switches to encrypted mode.
+// 8	Finished (Server)	Server verifies handshake.
+// ✅	Secure Session Established	Encrypted communication begins!
+// Let me know if you need a deeper dive into any part of the handshake! 🚀🔐
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:dart_tls/ch09/handshake/change_cipher_spec.dart';
 import 'package:dart_tls/ch09/handshake/handshake.dart';
-import 'package:dart_tls/ch09/handshake/server_key_exchange.dart';
 
-import '../cert_utils.dart';
 import '../crypto.dart';
 import '../dtls_message.dart';
 import '../dtls_state.dart';
@@ -143,11 +210,11 @@ class HandshakeManager {
     ProcessIncomingMessage(context, dtlsMsg);
   }
 
-  Future<bool?> ProcessIncomingMessage(
-      HandshakeContext context, DecodeDtlsMessageResult incomingMessage) async {
+  bool? ProcessIncomingMessage(
+      HandshakeContext context, DecodeDtlsMessageResult incomingMessage) {
     final (message, _, _) = incomingMessage.message;
 
-    print("Message runtime type: ${message.runtimeType}");
+    // print("Message runtime type: ${message.runtimeType}");
     switch (message.runtimeType) {
       case ClientHello:
         message as ClientHello;
@@ -155,6 +222,8 @@ class HandshakeManager {
         context.session_id = Uint8List.fromList(message.session_id);
         context.compression_methods = message.compression_methods;
         context.extensions = message.extensions;
+
+        context.flight = Flight.Flight0;
 
         switch (context.flight) {
           case Flight.Flight0:
@@ -166,18 +235,18 @@ class HandshakeManager {
             context.flight = Flight.Flight2;
             // logging.Descf(logging.ProtoDTLS, "Running into <u>Flight %d</u>.", context.Flight)
             // logging.LineSpacer(2)
-            final helloVerifyRequestResponse =
-                createDtlsHelloVerifyRequest(context);
-            sendMessage(context, helloVerifyRequestResponse);
-            return null;
-          case Flight.Flight2:
-            if (message.cookie.length == 0) {
-              context.flight = Flight.Flight0;
-              // logging.Errorf(logging.ProtoDTLS, "Expected not empty Client Hello Cookie but <nil> found!")
-              // logging.Descf(logging.ProtoDTLS, "Running into <u>Flight %d</u>.", context.Flight)
-              // logging.LineSpacer(2)
-              return null;
-            }
+            // final helloVerifyRequestResponse =
+            //     createDtlsHelloVerifyRequest(context);
+            // sendMessage(context, helloVerifyRequestResponse);
+            //return null;
+            //case Flight.Flight2:
+            // if (message.cookie.length == 0) {
+            //   context.flight = Flight.Flight0;
+            // logging.Errorf(logging.ProtoDTLS, "Expected not empty Client Hello Cookie but <nil> found!")
+            // logging.Descf(logging.ProtoDTLS, "Running into <u>Flight %d</u>.", context.Flight)
+            // logging.LineSpacer(2)
+            //   return null;
+            // }
             // if (!bytes.Equal(context.cookie, message.cookie)) {
             // 	throw ("client hello cookie is invalid");
             // }
@@ -222,25 +291,25 @@ class HandshakeManager {
             // context.serverRandom.generate();
             //logging.Descf(//logging.ProtoDTLS, "We generated Server Random, set to <u>0x%x</u> in handshake context.", context.ServerRandom.Encode())
 
-            var keys = generateP256Keys();
+            //var keys = generateX25519Keys();
             // if err != nil {
             // 	return m.setStateFailed(context, err)
             // }
 
-            context.serverPublicKey = keys.publicKey;
-            context.serverPrivateKey = keys.privateKey;
+            //context.serverPublicKey = keys.publicKey;
+            //context.serverPrivateKey = keys.privateKey;
             //logging.Descf(//logging.ProtoDTLS, "We generated Server Public and Private Key pair via <u>%s</u>, set in handshake context. Public Key: <u>0x%x</u>", context.Curve, context.ServerPublicKey)
 
-            final clientRandomBytes = context.clientRandom.marshal();
-            final serverRandomBytes = context.serverRandom.marshal();
+            // final clientRandomBytes = context.clientRandom.marshal();
+            // final serverRandomBytes = context.serverRandom.marshal();
 
             //logging.Descf(//logging.ProtoDTLS, "Generating ServerKeySignature. It will be sent to client via ServerKeyExchange DTLS message further.")
-            context.serverKeySignature = generateKeySignature(
-                clientRandomBytes,
-                serverRandomBytes,
-                context.serverPublicKey,
-                // context.curve, //x25519
-                context.serverPrivateKey);
+            // context.serverKeySignature = generateKeySignature(
+            //     clientRandomBytes,
+            //     serverRandomBytes,
+            //     context.serverPublicKey,
+            //     // context.curve, //x25519
+            //     context.serverPrivateKey);
             // if err != nil {
             // 	return m.setStateFailed(context, err)
             // }
@@ -251,14 +320,14 @@ class HandshakeManager {
             //logging.LineSpacer(2)
             final serverHelloResponse = createServerHello(context);
             sendMessage(context, serverHelloResponse);
-            final certificateResponse = createDtlsCertificate();
-            sendMessage(context, certificateResponse);
-            final serverKeyExchangeResponse =
-                createDtlsServerKeyExchange(context);
-            sendMessage(context, serverKeyExchangeResponse);
-            // final certificateRequestResponse =
-            //     createDtlsCertificateRequest(context);
-            // sendMessage(context, certificateRequestResponse);
+            // final certificateResponse = createDtlsCertificate();
+            // sendMessage(context, certificateResponse);
+            //  final serverKeyExchangeResponse =
+            //      createDtlsServerKeyExchange(context);
+            //   sendMessage(context, serverKeyExchangeResponse);
+            //   final certificateRequestResponse =
+            //       createDtlsCertificateRequest(context);
+            //   sendMessage(context, certificateRequestResponse);
             final serverHelloDoneResponse = createDtlsServerHelloDone(context);
             sendMessage(context, serverHelloDoneResponse);
 
@@ -305,14 +374,20 @@ class HandshakeManager {
       // 	return m.setStateFailed(context, err)
       // }
       case ClientKeyExchange:
-        context.clientKeyExchangePublic = message.PublicKey;
-        if (!context.isCipherSuiteInitialized) {
-          final err = initCipherSuite(context);
-          // if err != nil {
-          // 	return m.setStateFailed(context, err)
-          // }
-        }
+        context.clientKeyExchangePublic = message.publicKey;
+
+        // print("Client key exchange: ${message}");
+        // if (!context.isCipherSuiteInitialized) {
+        //   final err = initCipherSuite(context);
+        //   // if err != nil {
+        //   // 	return m.setStateFailed(context, err)
+        //   // }
+        // }
+
+        final changeCipherSpecResponse = createDtlsChangeCipherSpec(context);
+        sendMessage(context, changeCipherSpecResponse);
       case Finished:
+        print("Finished: ${message}");
       //logging.Descf(//logging.ProtoDTLS, "Received first encrypted message and decrypted successfully: Finished (epoch was increased to <u>%d</u>)", context.ClientEpoch)
       //logging.LineSpacer(2)
 
@@ -351,25 +426,15 @@ class HandshakeManager {
       // //logging.Infof(//logging.ProtoDTLS, "Handshake Succeeded with <u>%v:%v</u>.\n", context.Addr.IP, context.Addr.Port)
       // context.dTLSState = DTLSState.DTLSStateConnected;
       default:
+        {
+          print("Unhandled runtime type: ${message.runtimeType}");
+        }
     }
   }
 
-  ServerKeyExchange createDtlsServerKeyExchange(HandshakeContext context) {
-    return ServerKeyExchange(
-        identityHint: [],
-        ellipticCurveType: EllipticCurveType.NamedCurve,
-        namedCurve: NamedCurve.prime256v1,
-        publicKey: context.serverPublicKey,
-        algorithm: SignatureHashAlgorithm(
-            hash: HashAlgorithm.Sha256, signature: SignatureAlgorithm.Ecdsa),
-        signature: context.serverKeySignature);
-  }
+  createDtlsServerKeyExchange(HandshakeContext context) {}
 
-  Certificate createDtlsCertificate() {
-    return Certificate(certificate: [
-      Uint8List.fromList(pemToBytes(generateKeysAndCertificate()))
-    ]);
-  }
+  createDtlsCertificate() {}
 
   ServerHello createServerHello(HandshakeContext context) {
     // final ch = context.HandshakeMessagesReceived[HandshakeType.client_hello]
@@ -380,13 +445,13 @@ class HandshakeManager {
         context.serverRandom,
         context.session_id.length,
         context.session_id,
-        CipherSuiteId.Tls_Ecdhe_Ecdsa_With_Aes_128_Gcm_Sha256.value,
+        CipherSuiteId.Tls_Psk_With_Aes_128_Ccm_8.value,
         context.compression_methods[0],
         context.extensions);
   }
 
   CipherSuiteId negotiateOnCipherSuiteIDs(List<CipherSuiteId> cipherSuiteIDs) {
-    return CipherSuiteId.Tls_Ecdhe_Ecdsa_With_Aes_128_Gcm_Sha256;
+    return CipherSuiteId.Tls_Psk_With_Aes_128_Ccm;
   }
 
   createDtlsCertificateRequest(HandshakeContext context) {}
@@ -405,7 +470,9 @@ class HandshakeManager {
   verifyFinishedData(
       Object? handshakeMessages, serverMasterSecret, hashAlgorithm) {}
 
-  createDtlsChangeCipherSpec(HandshakeContext context) {}
+  ChangeCipherSpec createDtlsChangeCipherSpec(HandshakeContext context) {
+    return ChangeCipherSpec();
+  }
 
   // extension on HandshakeContext {
   //  void increaseServerEpoch() {}

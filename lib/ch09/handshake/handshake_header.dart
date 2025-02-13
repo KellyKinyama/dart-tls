@@ -1,6 +1,16 @@
 import 'dart:typed_data';
 
+import '../dtls_message.dart';
+import '../record_layer_header.dart';
+import 'certificate.dart';
+import 'certificate_verify.dart';
+import 'client_hello.dart';
+import 'client_key_exchange.dart';
+import 'finished.dart';
 import 'handshake.dart';
+import 'hello_verify_request.dart';
+import 'server_hello.dart';
+import 'server_key_exchange.dart';
 
 class Uint24 {
   final int value;
@@ -122,6 +132,50 @@ class HandshakeHeader {
     offset = decodedOffset;
     return (hh, offset, false);
   }
+}
+
+(dynamic, int, bool?) decodeHandshake(RecordLayerHeader header,
+    HandshakeHeader handshakeHeader, Uint8List buf, int offset, int arrayLen) {
+  // late BaseDtlsMessage result;
+  dynamic result;
+  switch (handshakeHeader.handshakeType) {
+    case HandshakeType.client_hello:
+      return ClientHello.unmarshal(buf, offset, arrayLen);
+    //break;
+    case HandshakeType.hello_verify_request:
+      return HelloVerifyRequest.unmarshal(buf, offset, arrayLen);
+
+    case HandshakeType.server_hello:
+      return ServerHello.unmarshal(buf, offset, arrayLen);
+
+    case HandshakeType.certificate:
+      return Certificate.decode(buf, offset, arrayLen);
+
+    case HandshakeType.server_key_exchange:
+      return ServerKeyExchange.decode(buf, offset, arrayLen);
+    // break;
+    // case HandshakeType.certificate_request:
+    //   return CertificateRequest.decode(buf, offset, arrayLen);
+
+    // case HandshakeType.server_hello_done:
+    //   return ServerHelloDone.unmarshal(buf, offset, arrayLen);
+
+    case HandshakeType.client_key_exchange:
+      // print("Handshake: $handshakeHeader");
+      return ClientKeyExchange.decode(buf, offset, arrayLen);
+
+    case HandshakeType.certificate_verify:
+      return CertificateVerify.decode(buf, offset, arrayLen);
+
+    case HandshakeType.finished:
+      // print("Handshake type: ${handshakeHeader.handshakeType}");
+      return Finished.unmarshal(buf, offset, arrayLen);
+    default:
+      print("Unkown handshake type: ${handshakeHeader.handshakeType}");
+      throw ArgumentError(DtlsErrors.errUnknownDtlsHandshakeType);
+  }
+  // var (decodeOffset, err) = result.decode(buf, offset, arrayLen);
+  return result;
 }
 
 void main() {
