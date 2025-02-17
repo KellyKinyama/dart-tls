@@ -405,6 +405,31 @@ class HandshakeManager {
     // final ch = context.HandshakeMessagesReceived[HandshakeType.client_hello]
     //     as ClientHello;
 
+    // Add only necessary extensions (filter out unwanted ones)
+    // final filteredExtensions = context.extensions.entries.where((ext) {
+    //   // Keep only extensions that are needed (example: KeyShareExtension)
+    //   if (ext is ExtSupportedEllipticCurves) {
+    //     final ext2 = ext as ExtSupportedEllipticCurves;
+    //     for (final curve in ext2.curves) {
+    //       if (curve == 29) {
+    //         return true;
+    //       } else {
+    //         return false;
+    //       }
+    //     }
+    //   } else {
+    //     return true;
+    //   }
+    //   return false;
+    // });
+
+    final ec = ExtSupportedEllipticCurves();
+    ec.curves = [29];
+
+    context.extensions[ExtensionType.ExtensionTypeSupportedEllipticCurves] = ec;
+
+    // print("EXtensions: ${context.extensions}");
+
     return ServerHello(
         context.protocolVersion,
         context.serverRandom,
