@@ -48,9 +48,9 @@ class ClientKeyExchange {
     // print("Client key exchange data: $data");
     int pskLength = ((data[0] << 8) | data[1]);
 
-    if (pskLength > data.length - 2) {
-      throw "errBufferTooSmall";
-    }
+    // if (pskLength > data.length - 2) {
+    //   throw "errBufferTooSmall";
+    // }
 
     // print("Data length: ${data.length}");
     // print("PSK length: ${pskLength + 2}");

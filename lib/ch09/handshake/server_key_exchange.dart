@@ -87,7 +87,7 @@ class ServerKeyExchange {
       );
     }
 
-    //print("Elliptic curve type: ${data[0]}");
+    print("Elliptic curve type: ${data[0]}");
 
     var ellipticCurveType = EllipticCurveType.fromInt(data[0]);
     int offset = 1;
@@ -143,26 +143,27 @@ class ServerKeyExchange {
 
 void main() {
   // Example usage
-  final handshake = ServerKeyExchange(
-    identityHint: [1, 2, 3],
-    ellipticCurveType: EllipticCurveType.NamedCurve,
-    namedCurve: NamedCurve.x25519,
-    publicKey: raw_server_key_exchange.sublist(4, 69), // Example public key
-    algorithm: SignatureHashAlgorithm(
-      hash: HashAlgorithm.sha256,
-      signature: SignatureAlgorithm.Ecdsa,
-    ),
-    signature: raw_server_key_exchange.sublist(73, 144), // Example signature
-  );
+  // final handshake = ServerKeyExchange(
+  //   identityHint: [1, 2, 3],
+  //   ellipticCurveType: EllipticCurveType.NamedCurve,
+  //   namedCurve: NamedCurve.x25519,
+  //   publicKey: raw_server_key_exchange.sublist(4, 69), // Example public key
+  //   algorithm: SignatureHashAlgorithm(
+  //     hash: HashAlgorithm.sha256,
+  //     signature: SignatureAlgorithm.Ecdsa,
+  //   ),
+  //   signature: raw_server_key_exchange.sublist(73, 144), // Example signature
+  // );
 
   // Marshal the data to a byte array
-  Uint8List marshalledData = handshake.marshal();
+  // Uint8List marshalledData = handshake.marshal();
   //print('Marshalled Data: $marshalledData');
-
+  // print("Content type: ${serverKeyExchange[0]}");
   // Unmarshal the byte array
-  final unmarshalled = ServerKeyExchange.unmarshal(raw_server_key_exchange);
-  print('Signature: ${unmarshalled.signature}');
-  print('expected:  ${raw_server_key_exchange.sublist(73, 144)}');
+  final unmarshalled = ServerKeyExchange.unmarshal(serverKeyExchange);
+
+  print('Server key exchange: ${unmarshalled.marshal()}');
+  print('expected:            $serverKeyExchange');
 //   print("""
 // """);
 
@@ -170,7 +171,7 @@ void main() {
 //   print('expected:   ${raw_server_key_exchange.sublist(4, 69)}');
 }
 
-final raw_server_key_exchange = Uint8List.fromList([
+final serverKeyExchange = Uint8List.fromList([
   0x03,
   0x00,
   0x1d,

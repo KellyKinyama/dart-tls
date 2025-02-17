@@ -24,6 +24,17 @@ class RecordLayerHeader {
     return RECORD_LAYER_HEADER_SIZE;
   }
 
+  Uint8List marshalSequence() {
+    final bd = ByteData(6);
+    bd.setUint8(0, (sequenceNumber >> 40) & 0xFF);
+    bd.setUint8(1, (sequenceNumber >> 32) & 0xFF);
+    bd.setUint8(2, (sequenceNumber >> 24) & 0xFF);
+    bd.setUint8(3, (sequenceNumber >> 16) & 0xFF);
+    bd.setUint8(4, (sequenceNumber >> 8) & 0xFF);
+    bd.setUint8(5, sequenceNumber & 0xFF);
+    return bd.buffer.asUint8List();
+  }
+
   Uint8List marshal() {
     if (sequenceNumber > MAX_SEQUENCE_NUMBER) {
       throw ArgumentError("Sequence number exceeds maximum allowed value.");

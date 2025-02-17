@@ -230,14 +230,14 @@ class HandshakeManager {
             //logging.LineSpacer(2)
             final serverHelloResponse = createDtlsServerHello(context);
             sendMessage(context, serverHelloResponse);
-            final certificateResponse = createDtlsCertificate();
-            sendMessage(context, certificateResponse);
+            // final certificateResponse = createDtlsCertificate();
+            // sendMessage(context, certificateResponse);
             final serverKeyExchangeResponse =
                 createDtlsServerKeyExchange(context);
             sendMessage(context, serverKeyExchangeResponse);
-            final certificateRequestResponse =
-                createDtlsCertificateRequest(context);
-            sendMessage(context, certificateRequestResponse);
+            // final certificateRequestResponse =
+            //     createDtlsCertificateRequest(context);
+            // sendMessage(context, certificateRequestResponse);
             final serverHelloDoneResponse = createDtlsServerHelloDone(context);
             sendMessage(context, serverHelloDoneResponse);
 
@@ -333,9 +333,12 @@ class HandshakeManager {
     }
   }
 
-  createDtlsServerKeyExchange(HandshakeContext context) {}
+  // createDtlsServerKeyExchange(HandshakeContext context) {}
 
-  createDtlsCertificate() {}
+  // Certificate createDtlsCertificate() {
+  //   // HandshakeContext context
+  //   return Certificate(certificate: [cre])
+  // }
 
   createDtlsServerHello(HandshakeContext context) {}
 

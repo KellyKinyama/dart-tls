@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:basic_utils/basic_utils.dart';
 import 'package:cryptography/cryptography.dart' as cryptography;
 import 'package:asn1lib/asn1lib.dart' as asn;
+import 'package:elliptic/elliptic.dart' as ec;
+import 'package:hex/hex.dart';
 
 import 'dart:convert';
 import 'dart:math';
@@ -10,6 +12,8 @@ import 'dart:typed_data';
 
 import 'package:pointycastle/asn1.dart';
 import 'package:pointycastle/export.dart';
+
+import 'hex2.dart';
 
 void ecSignature() {
   // the private key
@@ -134,10 +138,90 @@ String generateKeysAndCertificate() {
   // print('Public Key (Bytes): $publicKeyBytes');
   // print('Certificate (Bytes): $certificateBytes');
 
+  final parsed =
+      ASN1Sequence.fromBytes(Uint8List.fromList(pemToBytes(publicKeyPem)));
+
   return (
     privateKey: Uint8List.fromList(pemToBytes(privateKeyPem)),
-    publicKey: Uint8List.fromList(pemToBytes(publicKeyPem))
+    publicKey: parsed.encode()
   );
+}
+
+// ({Uint8List privateKey, Uint8List publicKey}) generateP256Keys() {
+//   var eCurve = ec.getP256();
+//   var priv = eCurve.generatePrivateKey();
+//   ec.PublicKey pub = priv.publicKey;
+
+//   // pub.print("public key: ${hexDecode(pub.t).length}");
+//   print("priv: ${priv.bytes.length}");
+//   print("public key length: ${hexDecode(pub.X.toRadixString(16)).length}");
+
+// // pub.
+//   // print(HEX.decode(encoded));
+
+//   // var test = ASN1Parser(Uint8List.fromList(hexDecode(pub.X.toRadixString(16))));
+//   //  test.
+
+//   // final encoded = ASN1Sequence(elements: [
+//   //   ASN1Integer(pub.curve.p),
+//   //   ASN1Integer(pub.X),
+//   //   ASN1Integer(pub.Y),
+//   // ]).encode();
+
+//   // final encoded =ASN1Integer(hexDecode(pub.X.toRadixString(16))).encode();
+
+//   print("public key length: ${hexDecode(pub.toHex()).length}");
+
+//   // final parsed =
+//   //     ASN1Sequence.fromBytes(Uint8List.fromList(hexDecode(pub.toHex())));
+
+//   // final parsed = ASN1Sequence.fromBytes(
+//   //     Uint8List.fromList(hexDecode(pub.X.toRadixString(16))));
+
+//   return (
+//     privateKey: Uint8List.fromList(priv.bytes),
+//     // publicKey: Uint8List.fromList(hexDecode(pub.toCompressedHex()))
+//     publicKey: Uint8List.fromList(hexDecode(pub.toHex()))
+//     // publicKey: Uint8List.fromList(hexDecode(pub.X.toRadixString(16)))
+//     // publicKey: parsed.encode()
+//   );
+// }
+
+({Uint8List privateKey, Uint8List publicKey}) generateP256Keys() {
+  var eCurve = ec.getP256();
+  var priv = eCurve.generatePrivateKey();
+  ec.PublicKey pub = priv.publicKey;
+
+  // Extract X and Y coordinates
+  BigInt x = pub.X;
+  BigInt y = pub.Y;
+
+  // Ensure they are correctly padded to 32 bytes
+  Uint8List xBytes = _bigIntToBytes(x, 32);
+  Uint8List yBytes = _bigIntToBytes(y, 32);
+
+  // Create the uncompressed public key format (0x04 || X || Y)
+  Uint8List uncompressedPublicKey =
+      Uint8List.fromList([0x04, ...xBytes, ...yBytes]);
+
+  print("Private Key: ${HEX.encode(priv.bytes)}");
+  print("Public Key: ${HEX.encode(uncompressedPublicKey)}");
+
+  return (
+    privateKey: Uint8List.fromList(priv.bytes),
+    publicKey: uncompressedPublicKey,
+  );
+}
+
+// Convert BigInt to Uint8List with fixed length (zero-padded)
+Uint8List _bigIntToBytes(BigInt value, int length) {
+  var bytes = value.toUnsigned(256).toRadixString(16).padLeft(length * 2, '0');
+  return Uint8List.fromList(HEX.decode(bytes));
+}
+
+void main() {
+  var keys = generateP256Keys();
+  print("Generated keys successfully!");
 }
 
 ({Uint8List privateKey, Uint8List publicKey}) generateECKeys() {
@@ -178,7 +262,10 @@ List<int> pemToBytes(String pem) {
       .replaceAll(RegExp(r'\s+'), '');
 
   // Decode the Base64 content
-  return base64.decode(base64Content);
+
+  final parsed = ASN1Sequence.fromBytes(base64.decode(base64Content));
+
+  return parsed.encode();
 }
 
 ({List<int> privateKey, List<int> publicKey, List<int> certificate})
@@ -327,8 +414,8 @@ void extractPrivateKey(String privateKeyPem) {
 //   return signer.verifySignature(data, ECSignature(signature));
 // }
 
-void main() {
-  //generateKeysAndCertificate();
+// void main() {
+//generateKeysAndCertificate();
 
 //   String cert = """-----BEGIN CERTIFICATE-----
 // MIIBTjCB8qADAgECAgEBMAwGCCqGSM49BAMCBQAwFjEUMBIGA1UEAxMLU2VsZi1T
@@ -354,5 +441,5 @@ void main() {
 //   extractPublicKey(pubkey);
 //   extractPrivateKey(privkey);
 
-  ecSignature();
-}
+//   ecSignature();
+// }

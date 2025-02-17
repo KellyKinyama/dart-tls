@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:asn1lib/asn1lib.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dart_tls/ch09/ecdsa_example.dart';
 import 'package:hex/hex.dart';
@@ -10,6 +11,7 @@ import 'package:cryptography/cryptography.dart' as cryptography;
 import 'package:elliptic/elliptic.dart';
 
 import 'crypto.dart';
+import 'crypto_gcm.dart';
 import 'ecdsa3.dart';
 import 'hex2.dart';
 import 'prf2.dart';
@@ -110,20 +112,31 @@ Uint8List generateKeyValueMessages(Uint8List clientRandom,
   return bb.toBytes();
 }
 
-({Uint8List privateKey, Uint8List publicKey}) generateP256Keys() {
-  var ec = getP256();
-  var priv = ec.generatePrivateKey();
-  var pub = priv.publicKey;
+// ({Uint8List privateKey, Uint8List publicKey}) generateP256Keys() {
+//   var ec = getP256();
+//   var priv = ec.generatePrivateKey();
+//   PublicKey pub = priv.publicKey;
 
-  print("public key: ${hexDecode(pub.toHex()).length}");
-  print("priv: ${priv.bytes.length}");
-  print("public key: ${hexDecode(pub.X.toRadixString(16)).length}");
+//   // pub.print("public key: ${hexDecode(pub.t).length}");
+//   print("priv: ${priv.bytes.length}");
+//   print("public key: ${hexDecode(pub.X.toRadixString(8)).length}");
 
-  return (
-    privateKey: Uint8List.fromList(priv.bytes),
-    publicKey: Uint8List.fromList(hexDecode(pub.toCompressedHex()))
-  );
-}
+//   // print(HEX.decode(encoded));
+
+//   // var test = ASN1Parser(Uint8List.fromList(hexDecode(pub.toHex())));
+//   //  test.
+
+//     final parsed =
+//       ASN1Sequence.fromBytes(Uint8List.fromList(hexDecode(pub.toHex())));
+
+//       //  final parsed =
+//       // ASN1Sequence.fromBytes(Uint8List.fromList(pemToBytes(publicKeyPem)));
+
+//   return (
+//     privateKey: Uint8List.fromList(priv.bytes),
+//     publicKey: parsed.encode()
+//   );
+// }
 
 // Future<({Uint8List privateKey, Uint8List publicKey})> generateP256Keys() async {
 //   // In this example, we use ECDSA-P256-SHA256
@@ -176,10 +189,68 @@ Uint8List generateKeySignature(Uint8List clientRandom, Uint8List serverRandom,
 }
 
 Uint8List generatePreMasterSecret(Uint8List publicKey, Uint8List privateKey) {
+  // final algorithm =cryptography.Ecdh.p256(length: 32);
+
+  // We can now calculate a 32-byte shared secret key.
+  // final sharedSecretKey = await algorithm.sharedSecretKey(
+  //   keyPair: aliceKeyPair,
+  //   remotePublicKey: bobPublicKey,
+  // );
   // TODO: For now, it generates only using X25519
   // https://github.com/pion/dtls/blob/bee42643f57a7f9c85ee3aa6a45a4fa9811ed122/pkg/crypto/prf/prf.go#L106
   return X25519(privateKey, publicKey);
 }
+
+// Future<Uint8List> generatePreMasterSecret(
+//     Uint8List publicKey, Uint8List privateKey) async {
+//   // Initialize the ECDH algorithm (P-256 curve).
+//   final algorithm = cryptography.Ecdh.p256(length: 65);
+
+//   // Create the key pair for Alice (using the private key).
+//   // final alicePrivateKey = cryptography.SecretKey(privateKey);
+//   final aliceKeyPair = await algorithm.newKeyPairFromSeed(privateKey);
+
+//   // Create the public key for Bob (the remote party).
+//   final bobPublicKey = cryptography.SimplePublicKey(publicKey,
+//       type: cryptography.KeyPairType.x25519);
+
+//   // Calculate the shared secret (premaster secret) using Alice's private key and Bob's public key.
+//   final sharedSecretKey = await algorithm.sharedSecretKey(
+//     keyPair: aliceKeyPair,
+//     remotePublicKey: bobPublicKey,
+//   );
+
+//   final sharedSecretKeyBytes = await sharedSecretKey.extractBytes();
+
+//   // Return the 32-byte shared secret (premaster secret).
+//   return Uint8List.fromList(sharedSecretKeyBytes);
+// }
+
+// Future<Uint8List> generatePreMasterSecret(
+//     Uint8List publicKey, Uint8List privateKey) async {
+//   // Initialize the ECDH algorithm (P-256 curve).
+//   final algorithm = cryptography.Ecdh.p256(length: 65);
+
+//   // Create the SecretKey from the private key.
+//   final privateKeyObj = cryptography.SecretKey(privateKey);
+
+//   // Create the public key object from the given public key.
+//   final publicKeyObj = cryptography.SimplePublicKey(publicKey,
+//       type: cryptography.KeyPairType.p256);
+
+//       algorithm.sharedSecretKey(keyPair: privateKeyObj, remotePublicKey: remotePublicKey)
+
+//   // Calculate the shared secret (premaster secret) using Alice's private key and Bob's public key.
+//   final sharedSecretKey = await algorithm.sharedSecretKey(
+//     keyPair: await algorithm
+//         .newKeyPairFromSeed(privateKey), // Create key pair using private key
+//     remotePublicKey: publicKeyObj,
+//   );
+
+//   final sharedSecretKeyBytes = await sharedSecretKey.extractBytes();
+//   // Return the 32-byte shared secret (premaster secret).
+//   return Uint8List.fromList(sharedSecretKeyBytes);
+// }
 
 Uint8List generateMasterSecret(
     Uint8List preMasterSecret, Uint8List clientRandom, Uint8List serverRandom) {
@@ -253,6 +324,38 @@ EncryptionKeys generateEncryptionKeys(Uint8List masterSecret,
     clientWriteIV: clientWriteIV,
     serverWriteIV: serverWriteIV,
   );
+}
+
+Future<GCM> initGCM(Uint8List masterSecret, Uint8List clientRandom,
+    Uint8List serverRandom) async {
+  //https://github.com/pion/dtls/blob/bee42643f57a7f9c85ee3aa6a45a4fa9811ed122/internal/ciphersuite/tls_ecdhe_ecdsa_with_aes_128_gcm_sha256.go#L60
+  // const (
+  final prfKeyLen = 16;
+  final prfIvLen = 4;
+  // )
+  // logging.Descf(logging.ProtoCRYPTO, "Initializing GCM with Key Length: <u>%d</u>, IV Length: <u>%d</u>, these values are constants of <u>%s</u> cipher suite.",
+  // 	prfKeyLen, prfIvLen, "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256")
+
+  final keys = generateEncryptionKeys(
+      masterSecret, clientRandom, serverRandom, prfKeyLen, prfIvLen);
+  // if err != nil {
+  // 	return nil, err
+  // }
+
+  // logging.Descf(logging.ProtoCRYPTO, "Generated encryption keys from keying material (Key Length: <u>%d</u>, IV Length: <u>%d</u>) (<u>%d bytes</u>)\n\tMasterSecret: <u>0x%x</u> (<u>%d bytes</u>)\n\tClientWriteKey: <u>0x%x</u> (<u>%d bytes</u>)\n\tServerWriteKey: <u>0x%x</u> (<u>%d bytes</u>)\n\tClientWriteIV: <u>0x%x</u> (<u>%d bytes</u>)\n\tServerWriteIV: <u>0x%x</u> (<u>%d bytes</u>)",
+  // 	prfKeyLen, prfIvLen, prfKeyLen*2+prfIvLen*2,
+  // 	keys.MasterSecret, len(keys.MasterSecret),
+  // 	keys.ClientWriteKey, len(keys.ClientWriteKey),
+  // 	keys.ServerWriteKey, len(keys.ServerWriteKey),
+  // 	keys.ClientWriteIV, len(keys.ClientWriteIV),
+  // 	keys.ServerWriteIV, len(keys.ServerWriteIV))
+
+  final gcm = await GCM.newGCM(keys.serverWriteKey, keys.serverWriteIV,
+      keys.clientWriteKey, keys.clientWriteIV);
+  // if err != nil {
+  // 	return nil, err
+  // }
+  return gcm;
 }
 
 void main() {

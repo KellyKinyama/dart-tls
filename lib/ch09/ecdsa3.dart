@@ -1,5 +1,6 @@
 import 'package:ecdsa/ecdsa.dart';
 import 'package:elliptic/elliptic.dart';
+import 'package:pointycastle/asn1.dart';
 
 import 'hex2.dart';
 
@@ -8,9 +9,12 @@ List<int> ecdsaSign(List<int> privateKeyBytes, List<int> hash) {
 
   final sig = signature(priv, hash);
 
-  final signatureBytes = sig.toASN1();
+  final encoded = ASN1Sequence(elements: [
+    ASN1Integer(sig.R),
+    ASN1Integer(sig.S),
+  ]).encode();
 
-  return signatureBytes;
+  return encoded;
 }
 
 bool ecdsaVerify(

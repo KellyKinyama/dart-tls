@@ -25,4 +25,9 @@ class ChangeCipherSpec {
       Uint8List buf, int offset, int arrayLen) {
     return (ChangeCipherSpec(), buf[offset], null);
   }
+
+  @override
+  String toString() {
+    return 'ChangeCipherSpec(size: $size, contentType: ${getContentType()})';
+  }
 }

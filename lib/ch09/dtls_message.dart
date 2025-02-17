@@ -1,6 +1,7 @@
 // class BaseDtlsHandshakeMessage {}
 
 import 'dart:typed_data';
+import 'package:dart_tls/ch09/handshake/change_cipher_spec.dart';
 import 'package:dart_tls/ch09/handshake/handshake_context.dart';
 
 import 'handshake/alert.dart';
@@ -32,7 +33,7 @@ class DecodeDtlsMessageResult {
       throw ArgumentError(DtlsErrors.errIncompleteDtlsMessage);
     }
 
-    print("Header content type: ${ContentType.fromInt(buf[0])}");
+    // print("Header content type: ${ContentType.fromInt(buf[0])}");
 
     final (header, decodedOffset, err) =
         RecordLayerHeader.unmarshal(buf, offset: offset, arrayLen: arrayLen);
@@ -42,7 +43,7 @@ class DecodeDtlsMessageResult {
     //print("offset: $offset, decodedOffset: $decodedOffset");
     offset = decodedOffset;
 
-    if (header.epoch > context.clientEpoch) {
+    if (header.epoch < context.clientEpoch) {
       // Ignore incoming message
       print("Header epock: ${header.epoch}");
       offset += header.contentLen;
@@ -55,21 +56,17 @@ class DecodeDtlsMessageResult {
 
     Uint8List? decryptedBytes;
     Uint8List? encryptedBytes;
-    if (header.epoch < context.clientEpoch) {
-      // Data arrives encrypted, we should decrypt it before.
-      // if (context.isCipherSuiteInitialized) {
-      //   encryptedBytes = buf.sublist(offset, offset + header.length);
-      //   offset += header.length;
-      //   decryptedBytes = await context.gcm?.decrypt(header, encryptedBytes);
-      // }
 
-      throw UnimplementedError(
-          "Data arrives encrypted, we should decrypt it before");
+    if (header.epoch > 0) {
+      print("Data arrived encrypted!!!");
+      throw UnimplementedError("Encryption is not yet implemented");
     }
 
     context.clientEpoch = header.epoch;
 
-    // print("Content type: ${header.contentType}");
+    // if (header.contentType != ContentType.content_handshake) {
+    print("Content type: ${header.contentType}");
+    // }
     switch (header.contentType) {
       case ContentType.content_handshake:
         if (decryptedBytes == null) {
@@ -111,12 +108,23 @@ class DecodeDtlsMessageResult {
       case ContentType.content_change_cipher_spec:
         {
           print(" Content type: ${header.contentType}");
+
+          // throw UnimplementedError(
+          //     "Content type: ${header.contentType} is not implemented");
+
+          var (changeCipherSpec, decodedOffset, err) =
+              ChangeCipherSpec.unmarshal(buf, offset, arrayLen);
+
+          print("Change cipher spec: $changeCipherSpec");
+
+          return DecodeDtlsMessageResult(header, null, changeCipherSpec);
         }
 
       case ContentType.content_alert:
         final alert = Alert.unmarshal(buf, offset, arrayLen);
 
         return DecodeDtlsMessageResult(header, null, alert);
+
       // throw UnimplementedError("Unhandled content type: ${header.contentType}");
       default:
         {

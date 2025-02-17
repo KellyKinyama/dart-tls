@@ -273,6 +273,14 @@ class ProtocolVersion {
     return ProtocolVersion(major, minor);
   }
 
+  Uint8List marshal() {
+    ByteData writer = ByteData.sublistView(Uint8List(2));
+
+    writer.setUint8(0, major);
+    writer.setUint8(0, minor);
+    return writer.buffer.asUint8List();
+  }
+
   @override
   String toString() {
     // TODO: implement toString
