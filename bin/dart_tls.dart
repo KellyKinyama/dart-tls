@@ -7,8 +7,8 @@ import 'package:dart_tls/ch09/handshaker/aes_gcm_128_sha_256.dart';
 // import 'package:dart_tls/dart_tls.dart' as dart_tls;
 
 void main(List<String> arguments) {
-  String ip = "127.0.0.1";
-  // String ip = "10.100.53.174";
+  // String ip = "127.0.0.1";
+  String ip = "10.100.53.174";
   int port = 4444;
   RawDatagramSocket.bind(InternetAddress(ip), port)
       .then((RawDatagramSocket socket) {
