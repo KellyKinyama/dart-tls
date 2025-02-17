@@ -46,13 +46,13 @@ enum SignatureAlgorithm {
 
 class SignatureHashAlgorithm {
   final HashAlgorithm hash;
-  final SignatureAlgorithm signature;
+  final SignatureAlgorithm signatureAgorithm;
 
-  SignatureHashAlgorithm({required this.hash, required this.signature});
+  SignatureHashAlgorithm({required this.hash, required this.signatureAgorithm});
 
   @override
   String toString() {
-    return 'SignatureHashAlgorithm(hash: $hash, signature: $signature)';
+    return 'SignatureHashAlgorithm(hash: $hash, signature: $signatureAgorithm)';
   }
 }
 

@@ -27,7 +27,7 @@ class CertificateVerify {
 
     // Write algorithm
     byteData.addByte(algorithm.hash.value);
-    byteData.addByte(algorithm.signature.value);
+    byteData.addByte(algorithm.signatureAgorithm.value);
 
     // Write signature length
     byteData.addByte(signature.length >> 8);
@@ -49,7 +49,7 @@ class CertificateVerify {
     final signatureAlgorithm =
         SignatureAlgorithm.fromInt(reader.getUint8(offset++));
     final algorithm = SignatureHashAlgorithm(
-        hash: hashAlgorithm, signature: signatureAlgorithm);
+        hash: hashAlgorithm, signatureAgorithm: signatureAlgorithm);
 
     // Read signature length
     final signatureLength = reader.getUint16(offset);

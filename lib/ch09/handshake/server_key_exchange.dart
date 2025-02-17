@@ -8,7 +8,7 @@ class ServerKeyExchange {
   final EllipticCurveType ellipticCurveType;
   final NamedCurve namedCurve;
   final List<int> publicKey;
-  final SignatureHashAlgorithm algorithm;
+  final SignatureHashAlgorithm signatureHashAlgorithm;
   final List<int> signature;
 
   ServerKeyExchange({
@@ -16,7 +16,7 @@ class ServerKeyExchange {
     required this.ellipticCurveType,
     required this.namedCurve,
     required this.publicKey,
-    required this.algorithm,
+    required this.signatureHashAlgorithm,
     required this.signature,
   });
 
@@ -57,8 +57,8 @@ class ServerKeyExchange {
     byteData.addByte(publicKey.length);
     byteData.add(Uint8List.fromList(publicKey));
 
-    byteData.addByte(algorithm.hash.value);
-    byteData.addByte(algorithm.signature.value);
+    byteData.addByte(signatureHashAlgorithm.hash.value);
+    byteData.addByte(signatureHashAlgorithm.signatureAgorithm.value);
 
     byteData.add(Uint8List.fromList([
       (signature.length >> 8) & 0xFF,
@@ -79,9 +79,9 @@ class ServerKeyExchange {
         ellipticCurveType: EllipticCurveType.unsupported,
         namedCurve: NamedCurve.Unsupported,
         publicKey: [],
-        algorithm: SignatureHashAlgorithm(
+        signatureHashAlgorithm: SignatureHashAlgorithm(
           hash: HashAlgorithm.unsupported,
-          signature: SignatureAlgorithm.unsupported,
+          signatureAgorithm: SignatureAlgorithm.unsupported,
         ),
         signature: [],
       );
@@ -119,9 +119,9 @@ class ServerKeyExchange {
       ellipticCurveType: ellipticCurveType,
       namedCurve: namedCurve,
       publicKey: publicKey,
-      algorithm: SignatureHashAlgorithm(
+      signatureHashAlgorithm: SignatureHashAlgorithm(
         hash: HashAlgorithm.fromInt(hashAlgorithmIndex),
-        signature: SignatureAlgorithm.fromInt(signatureAlgorithmIndex),
+        signatureAgorithm: SignatureAlgorithm.fromInt(signatureAlgorithmIndex),
       ),
       signature: signature,
     );
@@ -129,7 +129,7 @@ class ServerKeyExchange {
 
   @override
   String toString() {
-    return 'ServerKeyExchange(identityHint: $identityHint, ellipticCurveType: $ellipticCurveType, namedCurve: $namedCurve, publicKey: $publicKey, algorithm: $algorithm, signature: $signature)';
+    return 'ServerKeyExchange(identityHint: $identityHint, ellipticCurveType: $ellipticCurveType, namedCurve: $namedCurve, publicKey: $publicKey, algorithm: $signatureHashAlgorithm, signature: $signature)';
   }
 
   static decode(Uint8List buf, int offset, int arrayLen) {}
@@ -147,12 +147,12 @@ void main() {
   //   identityHint: [1, 2, 3],
   //   ellipticCurveType: EllipticCurveType.NamedCurve,
   //   namedCurve: NamedCurve.x25519,
-  //   publicKey: raw_server_key_exchange.sublist(4, 69), // Example public key
-  //   algorithm: SignatureHashAlgorithm(
+  //   publicKey: serverKeyExchange.sublist(4, 69), // Example public key
+  //   signatureHashAlgorithm: SignatureHashAlgorithm(
   //     hash: HashAlgorithm.sha256,
-  //     signature: SignatureAlgorithm.Ecdsa,
+  //     signatureAgorithm: SignatureAlgorithm.Ecdsa,
   //   ),
-  //   signature: raw_server_key_exchange.sublist(73, 144), // Example signature
+  //   signature: serverKeyExchange.sublist(73, 144), // Example signature
   // );
 
   // Marshal the data to a byte array
@@ -161,8 +161,10 @@ void main() {
   // print("Content type: ${serverKeyExchange[0]}");
   // Unmarshal the byte array
   final unmarshalled = ServerKeyExchange.unmarshal(serverKeyExchange);
-
+  print('Server key exchange: $unmarshalled');
+  print("");
   print('Server key exchange: ${unmarshalled.marshal()}');
+  print("");
   print('expected:            $serverKeyExchange');
 //   print("""
 // """);

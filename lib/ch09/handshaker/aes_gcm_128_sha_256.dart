@@ -386,10 +386,11 @@ class HandshakeManager {
     return ServerKeyExchange(
         identityHint: [],
         ellipticCurveType: EllipticCurveType.NamedCurve,
-        namedCurve: NamedCurve.prime256v1,
+        namedCurve: NamedCurve.x25519,
         publicKey: context.serverPublicKey,
-        algorithm: SignatureHashAlgorithm(
-            hash: HashAlgorithm.Sha256, signature: SignatureAlgorithm.Ecdsa),
+        signatureHashAlgorithm: SignatureHashAlgorithm(
+            hash: HashAlgorithm.Sha256,
+            signatureAgorithm: SignatureAlgorithm.Ecdsa),
         signature: context.serverKeySignature);
   }
 
@@ -426,7 +427,7 @@ class HandshakeManager {
     final ec = ExtSupportedEllipticCurves();
     ec.curves = [29];
 
-    context.extensions[ExtensionType.ExtensionTypeSupportedEllipticCurves] = ec;
+    // context.extensions[ExtensionType.ExtensionTypeSupportedEllipticCurves] = ec;
 
     context.extensions.remove(ExtensionType.ExtensionTypeUnknown);
 
