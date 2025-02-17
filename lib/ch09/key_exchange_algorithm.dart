@@ -198,7 +198,8 @@ Uint8List generatePreMasterSecret(Uint8List publicKey, Uint8List privateKey) {
   // );
   // TODO: For now, it generates only using X25519
   // https://github.com/pion/dtls/blob/bee42643f57a7f9c85ee3aa6a45a4fa9811ed122/pkg/crypto/prf/prf.go#L106
-  return X25519(privateKey, publicKey);
+  // return X25519(privateKey, publicKey);
+  return X25519(publicKey, privateKey);
 }
 
 // Future<Uint8List> generatePreMasterSecret(

@@ -428,7 +428,9 @@ class HandshakeManager {
 
     context.extensions[ExtensionType.ExtensionTypeSupportedEllipticCurves] = ec;
 
-    // print("EXtensions: ${context.extensions}");
+    context.extensions.remove(ExtensionType.ExtensionTypeUnknown);
+
+    print("EXtensions: ${context.extensions}");
 
     return ServerHello(
         context.protocolVersion,
@@ -526,7 +528,7 @@ class HandshakeManager {
   negotiateOnSRTPProtectionProfiles(protectionProfiles) {}
 
   Future<void> initCipherSuite(HandshakeContext context) async {
-    final preMasterSecret = await generatePreMasterSecret(
+    final preMasterSecret = generatePreMasterSecret(
         context.clientKeyExchangePublic, context.serverPrivateKey);
     // if err != nil {
     // 	return err
