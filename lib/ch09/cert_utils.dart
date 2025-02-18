@@ -263,9 +263,10 @@ List<int> pemToBytes(String pem) {
 
   // Decode the Base64 content
 
-  final parsed = ASN1Sequence.fromBytes(base64.decode(base64Content));
+  // final parsed = ASN1Sequence.fromBytes(base64.decode(base64Content));
 
-  return parsed.encode();
+  // return parsed.encode();
+  return base64.decode(base64Content);
 }
 
 ({List<int> privateKey, List<int> publicKey, List<int> certificate})

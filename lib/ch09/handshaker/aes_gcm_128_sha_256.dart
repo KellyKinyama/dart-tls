@@ -136,9 +136,9 @@ class HandshakeManager {
     // resultTypes, true
   }
 
-  void processDtlsMessage(Uint8List data) {
+  Future<void> processDtlsMessage(Uint8List data) async {
     final dtlsMsg =
-        DecodeDtlsMessageResult.decode(context, data, 0, data.length);
+        await DecodeDtlsMessageResult.decode(context, data, 0, data.length);
 
     // print("dtls message: $dtlsMsg");
     ProcessIncomingMessage(context, dtlsMsg);
@@ -386,7 +386,7 @@ class HandshakeManager {
     return ServerKeyExchange(
         identityHint: [],
         ellipticCurveType: EllipticCurveType.NamedCurve,
-        namedCurve: NamedCurve.x25519,
+        namedCurve: NamedCurve.prime256v1,
         publicKey: context.serverPublicKey,
         signatureHashAlgorithm: SignatureHashAlgorithm(
             hash: HashAlgorithm.Sha256,
@@ -425,11 +425,14 @@ class HandshakeManager {
     // });
 
     final ec = ExtSupportedEllipticCurves();
-    ec.curves = [29];
+    ec.curves = [23];
 
-    // context.extensions[ExtensionType.ExtensionTypeSupportedEllipticCurves] = ec;
+    context.extensions[ExtensionType.ExtensionTypeSupportedEllipticCurves] = ec;
 
     context.extensions.remove(ExtensionType.ExtensionTypeUnknown);
+
+    context.extensions
+        .remove(ExtensionType.ExtensionTypeUseExtendedMasterSecret);
 
     print("EXtensions: ${context.extensions}");
 

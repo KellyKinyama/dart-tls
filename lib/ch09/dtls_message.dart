@@ -27,8 +27,8 @@ class DecodeDtlsMessageResult {
   DecodeDtlsMessageResult(
       this.recordHeader, this.handshakeHeader, this.message);
 
-  static DecodeDtlsMessageResult decode(
-      HandshakeContext context, Uint8List buf, int offset, int arrayLen) {
+  static Future<DecodeDtlsMessageResult> decode(
+      HandshakeContext context, Uint8List buf, int offset, int arrayLen) async {
     if (arrayLen < 1) {
       throw ArgumentError(DtlsErrors.errIncompleteDtlsMessage);
     }
@@ -59,7 +59,17 @@ class DecodeDtlsMessageResult {
 
     if (header.epoch > 0) {
       print("Data arrived encrypted!!!");
-      throw UnimplementedError("Encryption is not yet implemented");
+      // throw UnimplementedError("Encryption is not yet implemented");
+
+      // Data arrives encrypted, we should decrypt it before.
+      if (context.isCipherSuiteInitialized) {
+        encryptedBytes = buf.sublist(offset, offset + header.contentLen);
+        offset += header.contentLen;
+        decryptedBytes = await context.gcm.decrypt(header, encryptedBytes);
+        // 	if err != nil {
+        // 		return nil, nil, nil, offset, err
+        // 	}
+      }
     }
 
     context.clientEpoch = header.epoch;
@@ -93,12 +103,12 @@ class DecodeDtlsMessageResult {
 
           return DecodeDtlsMessageResult(header, handshakeHeader, result);
         } else {
-          final (handshakeHeader, decodedOffset, err) =
-              HandshakeHeader.decode(decryptedBytes, 0, decryptedBytes.length);
+          final (handshakeHeader, decodedOffset, err) = HandshakeHeader.decode(
+              decryptedBytes!, 0, decryptedBytes!.length);
           final result = decodeHandshake(header, handshakeHeader,
-              decryptedBytes, 0, decryptedBytes.length);
+              decryptedBytes!, 0, decryptedBytes!.length);
 
-          final copyArray = Uint8List.fromList(decryptedBytes);
+          final copyArray = Uint8List.fromList(decryptedBytes!);
           context.HandshakeMessagesReceived[handshakeHeader.handshakeType] =
               copyArray;
 

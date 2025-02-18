@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:math';
 import 'package:cryptography/cryptography.dart' as cryptography;
@@ -57,47 +58,101 @@ class GCM {
 
   /// Decrypts a DTLS RecordLayer message
   /// Decrypts a DTLS RecordLayer message
+//   Future<Uint8List> decrypt(RecordLayerHeader header, Uint8List inData) async {
+//     final completer = Completer<bool>();
+//     if (header.contentType == ContentType.content_change_cipher_spec) {
+//       return inData; // Nothing to decrypt for ChangeCipherSpec
+//     }
+
+//     final encryptedPayload = inData.sublist(8);
+//     final additionalData = generateAEADAdditionalData(
+//         header, encryptedPayload.length - gcmTagLength);
+
+//     //       final bb=BytesBuilder();
+//     // final nonce =List.filled(gcmNonceLength, 0);
+//     // bb.add(nonce);
+//     // bb.add(remoteWriteIV.sublist(0,4));
+//     // bb.add(inData.sublist(0,8));
+//     // // nonce = append(append(nonce, g.remoteWriteIV[:4]...), in[0:8]...)
+//     // final out := in[8:]
+
+//     // additionalData := generateAEADAdditionalData(h, len(out)-gcmTagLength)
+//     // var err error
+//     // out, err = g.remoteGCM.Open(out[:0], nonce, out, additionalData)
+//     // if err != nil {
+//     // 	return nil, fmt.Errorf("error on decrypting packet: %v", err)
+//     // }
+//     // return out, nil
+
+//     // try {
+//     // final nonce = Uint8List(gcmNonceLength);
+//     // nonce.setRange(0, 4, localWriteIV.sublist(0, 4));
+
+//     // final random = Random.secure();
+//     // for (int i = 4; i < gcmNonceLength; i++) {
+//     //   nonce[i] = random.nextInt(256);
+//     // }
+
+// // Make sure it's used when encrypting:
+//     // final secretBox = await localGCM.encrypt(
+//     //   encryptedPayload,
+//     //   secretKey: cryptography.SecretKey(localKey),
+//     //   nonce: nonce, // Correctly use the nonce here
+//     //   aad: additionalData,
+//     // );
+
+//     final secretBox = cryptography.SecretBox.fromConcatenation(encryptedPayload,
+//         nonceLength: gcmNonceLength, macLength: gcmTagLength);
+
+//     // Decrypt using the remoteSecretKey
+//     final decrypted = await remoteGCM.decrypt(
+//       secretBox,
+//       secretKey:
+//           cryptography.SecretKey(remoteKey), // Pass the required secretKey
+
+//       aad: additionalData,
+//     );
+
+//     completer.complete(true);
+//     return Uint8List.fromList(decrypted);
+//     // } catch (e) {
+//     //   throw Exception("Error decrypting packet: $e");
+//     // }
+//   }
+
   Future<Uint8List> decrypt(RecordLayerHeader header, Uint8List inData) async {
     if (header.contentType == ContentType.content_change_cipher_spec) {
       return inData; // Nothing to decrypt for ChangeCipherSpec
     }
+    final completer = Completer<bool>();
+    // Extract the nonce and encrypted payload
+    // final nonce = Uint8List(gcmNonceLength);
+    // nonce.setRange(0, 4, remoteWriteIV.sublist(0, 4));
+    // nonce.setRange(4, gcmNonceLength, inData.sublist(0, 4));
+
+    final bb = BytesBuilder();
+    bb.add(remoteWriteIV.sublist(0, 4));
+    bb.add(inData.sublist(0, 4));
+    final nonce = bb.toBytes();
 
     final encryptedPayload = inData.sublist(8);
+
+    // Prepare additional data for AEAD
     final additionalData = generateAEADAdditionalData(
         header, encryptedPayload.length - gcmTagLength);
 
-    // try {
-    // final nonce = Uint8List(gcmNonceLength);
-    // nonce.setRange(0, 4, localWriteIV.sublist(0, 4));
-
-    // final random = Random.secure();
-    // for (int i = 4; i < gcmNonceLength; i++) {
-    //   nonce[i] = random.nextInt(256);
-    // }
-
-// Make sure it's used when encrypting:
-    // final secretBox = await localGCM.encrypt(
-    //   encryptedPayload,
-    //   secretKey: cryptography.SecretKey(localKey),
-    //   nonce: nonce, // Correctly use the nonce here
-    //   aad: additionalData,
-    // );
-
+    // Decrypt the data using the remote GCM key
     final secretBox = cryptography.SecretBox.fromConcatenation(encryptedPayload,
-        nonceLength: gcmNonceLength, macLength: gcmTagLength);
-
-    // Decrypt using the remoteSecretKey
+        nonceLength: nonce.length,
+        macLength: encryptedPayload.length - gcmTagLength);
     final decrypted = await remoteGCM.decrypt(
       secretBox,
-      secretKey:
-          cryptography.SecretKey(remoteKey), // Pass the required secretKey
-
+      secretKey: cryptography.SecretKey(remoteKey),
       aad: additionalData,
     );
+
+    completer.complete(true);
     return Uint8List.fromList(decrypted);
-    // } catch (e) {
-    //   throw Exception("Error decrypting packet: $e");
-    // }
   }
 }
 
