@@ -1,0 +1,29 @@
+{
+  "name": "dart-tls",
+  "version": "1.0.0",
+  "description": "A sample command-line application with an entrypoint in `bin/`, library code in `lib/`, and example unit test in `test/`.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KellyKinyama/dart-tls.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KellyKinyama/dart-tls/issues"
+  },
+  "homepage": "https://github.com/KellyKinyama/dart-tls#readme",
+  "dependencies": {
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3",
+    "werift": "^0.22.1"
+  }
+}
