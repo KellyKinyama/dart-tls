@@ -13,7 +13,7 @@ testPrfMasterSecret() {
   final unmarshalled = TlsRandom.fromBytes(clientRandom, 0);
   print("Got:        ${unmarshalled.marshal()}");
   print("Wanted:     $clientRandom");
-  print()
+  // print()
 }
 
 void main() {

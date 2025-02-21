@@ -264,7 +264,6 @@ Uint8List generateMasterSecret(
   final seed = Uint8List.fromList(
       [...utf8.encode("master secret"), ...clientRandom, ...serverRandom]);
 
- 
   final result = pHash(preMasterSecret, seed, 48);
   print(
       "Generated MasterSecret (not Extended) using Pre-Master Secret, Client Random and Server Random via <u>%s</u>: <u>0x%x</u> (<u>%d bytes</u>) SHA256");
@@ -375,6 +374,28 @@ Future<GCM> initGCM(Uint8List masterSecret, Uint8List clientRandom,
   // 	return nil, err
   // }
   return gcm;
+}
+
+Uint8List prfVerifyData(
+  Uint8List masterSecret,
+  Uint8List handshakes,
+  String label, [
+  int size = 12,
+]) {
+  final bytes = sha256.convert(handshakes).bytes;
+  return pHash(
+    masterSecret,
+    Uint8List.fromList(utf8.encode(label) + bytes),
+    size,
+  );
+}
+
+Uint8List prfVerifyDataClient(Uint8List masterSecret, Uint8List handshakes) {
+  return prfVerifyData(masterSecret, handshakes, "client finished");
+}
+
+Uint8List prfVerifyDataServer(Uint8List masterSecret, Uint8List handshakes) {
+  return prfVerifyData(masterSecret, handshakes, "server finished");
 }
 
 void main() {
