@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:asn1lib/asn1lib.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dart_tls/ch09/ecdsa_example.dart';
+import 'package:dart_tls/ch09/handshake/tls_random.dart';
 import 'package:hex/hex.dart';
 import 'package:x25519/x25519.dart';
 import 'package:collection/collection.dart';
@@ -11,7 +12,7 @@ import 'package:cryptography/cryptography.dart' as cryptography;
 import 'package:elliptic/elliptic.dart';
 
 import 'crypto.dart';
-import 'crypto_gcm.dart';
+import 'crypto_gcm5.dart';
 import 'ecdsa3.dart';
 import 'hex2.dart';
 import 'prf2.dart';
@@ -258,9 +259,12 @@ Uint8List generatePreMasterSecret(Uint8List publicKey, Uint8List privateKey) {
 Uint8List generateMasterSecret(
     Uint8List preMasterSecret, Uint8List clientRandom, Uint8List serverRandom) {
   // seed := append(append([]byte("master secret"), clientRandom...), serverRandom...)
+
+  // final random =TlsRandom.defaultInstance();
   final seed = Uint8List.fromList(
       [...utf8.encode("master secret"), ...clientRandom, ...serverRandom]);
 
+ 
   final result = pHash(preMasterSecret, seed, 48);
   print(
       "Generated MasterSecret (not Extended) using Pre-Master Secret, Client Random and Server Random via <u>%s</u>: <u>0x%x</u> (<u>%d bytes</u>) SHA256");
@@ -304,6 +308,18 @@ class EncryptionKeys {
     required this.clientWriteIV,
     required this.serverWriteIV,
   });
+
+  @override
+  String toString() {
+    return '''
+EncryptionKeys(
+  masterSecret: $masterSecret}
+  clientWriteKey: $clientWriteKey}
+  serverWriteKey: $serverWriteKey}
+  clientWriteIV: $clientWriteIV}
+  serverWriteIV: $serverWriteIV}
+)''';
+  }
 }
 
 EncryptionKeys generateEncryptionKeys(Uint8List masterSecret,
@@ -353,7 +369,7 @@ Future<GCM> initGCM(Uint8List masterSecret, Uint8List clientRandom,
   // 	keys.ClientWriteIV, len(keys.ClientWriteIV),
   // 	keys.ServerWriteIV, len(keys.ServerWriteIV))
 
-  final gcm = await GCM.newGCM(keys.serverWriteKey, keys.serverWriteIV,
+  final gcm = await GCM.create(keys.serverWriteKey, keys.serverWriteIV,
       keys.clientWriteKey, keys.clientWriteIV);
   // if err != nil {
   // 	return nil, err

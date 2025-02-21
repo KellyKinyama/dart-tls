@@ -34,6 +34,7 @@ class DecodeDtlsMessageResult {
     }
 
     // print("Header content type: ${ContentType.fromInt(buf[0])}");
+    final recordHeaderOffset = 0;
 
     final (header, decodedOffset, err) =
         RecordLayerHeader.unmarshal(buf, offset: offset, arrayLen: arrayLen);
@@ -65,11 +66,22 @@ class DecodeDtlsMessageResult {
       if (context.isCipherSuiteInitialized) {
         encryptedBytes = buf.sublist(offset, offset + header.contentLen);
         offset += header.contentLen;
-        decryptedBytes = await context.gcm.decrypt(header, encryptedBytes);
+        decryptedBytes = await context.gcm.decrypt(buf);
         // 	if err != nil {
         // 		return nil, nil, nil, offset, err
         // 	}
       }
+
+      // Data arrives encrypted, we should decrypt it before.
+      // if context.IsCipherSuiteInitialized {
+      // 	encryptedBytes = buf[offset : offset+int(header.Length)]
+      // 	offset += int(header.Length)
+      // 	decryptedBytes, err = context.GCM.Decrypt(header, encryptedBytes)
+      // 	if err != nil {
+      // 		return nil, nil, nil, offset, err
+      // 	}
+      // }
+      // }
     }
 
     context.clientEpoch = header.epoch;

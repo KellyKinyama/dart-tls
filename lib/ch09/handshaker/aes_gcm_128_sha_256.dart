@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:dart_tls/ch09/handshake/change_cipher_spec.dart';
 import 'package:dart_tls/ch09/handshake/handshake.dart';
 import 'package:dart_tls/ch09/handshake/server_key_exchange.dart';
+import 'package:hex/hex.dart';
 
 import '../cert_utils.dart';
 import '../crypto.dart';
@@ -230,11 +231,13 @@ class HandshakeManager {
             context.clientRandom = message.random;
             //logging.Descf(//logging.ProtoDTLS, "Client sent Client Random, it set to <u>0x%x</u> in handshake context.", message.Random.Encode())
             context.serverRandom = TlsRandom.defaultInstance();
+            context.serverRandom.populate();
             // context.serverRandom.generate();
             //logging.Descf(//logging.ProtoDTLS, "We generated Server Random, set to <u>0x%x</u> in handshake context.", context.ServerRandom.Encode())
 
             final clientRandomBytes = context.clientRandom.marshal();
             final serverRandomBytes = context.serverRandom.marshal();
+            print("Server random length: ${serverRandomBytes.length}");
 
             // var keys2 = generateKeys();
             var keys = generateP256Keys();
@@ -274,8 +277,8 @@ class HandshakeManager {
             final serverHelloDoneResponse = createDtlsServerHelloDone(context);
             sendMessage(context, serverHelloDoneResponse);
 
-            final finishedResponse = createDtlsFinished(context);
-            sendMessage(context, finishedResponse);
+          // final finishedResponse = createDtlsFinished(context);
+          // sendMessage(context, finishedResponse);
 
           default:
             {
@@ -537,6 +540,11 @@ class HandshakeManager {
     // if err != nil {
     // 	return err
     // }
+    print("pre Master secret: ${HEX.encode(preMasterSecret)}");
+    // fb34ef080bf9f808b94665cd41ad16761b98653d1b7208ec44fc88b997819f48
+
+    // pre Master secret: fb34ef080bf9f808b94665cd41ad16761b98653d1b7208ec44fc88b997819f48
+
     final clientRandomBytes = context.clientRandom.marshal();
     final serverRandomBytes = context.serverRandom.marshal();
 
@@ -559,6 +567,11 @@ class HandshakeManager {
     // } else {
     context.serverMasterSecret = generateMasterSecret(
         preMasterSecret, clientRandomBytes, serverRandomBytes);
+
+    print("Master secret: ${HEX.encode(context.serverMasterSecret)}");
+
+    //dart Master secret: 6b0d05a652c61f336a86a66c0bc33fe59d8b740ec85159eed8bf391810dc4dcca9132bacd9f287f12d3d128f08e950c9
+    //  ts Master secret: e8d0d762817ed783c9707ab40444e70e0ecb2207ccfd6ef46ae5d2c7c8d1c9b6175bbc1b3bdf0339fe05ff27c5438736
     //logging.Descf(logging.ProtoDTLS, "Generated ServerMasterSecret (Not Extended): <u>0x%x</u> (<u>%d bytes</u>), using Pre-Master Secret, Client Random and Server Random.", context.ServerMasterSecret, len(context.ServerMasterSecret))
     //}
     // if err != nil {
