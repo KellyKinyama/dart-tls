@@ -174,7 +174,7 @@ class HandshakeManager {
             context.protocolVersion = message.client_version;
             context.cookie = generateDtlsCookie();
             // logging.Descf(logging.ProtoDTLS, "DTLS Cookie was generated and set to <u>0x%x</u> in handshake context (<u>%d bytes</u>).", context.Cookie, len(context.Cookie))
-
+            context.clientRandom = message.random;
             context.flight = Flight.Flight2;
             // logging.Descf(logging.ProtoDTLS, "Running into <u>Flight %d</u>.", context.Flight)
             // logging.LineSpacer(2)
@@ -227,15 +227,15 @@ class HandshakeManager {
               //   //logging.Descf(//logging.ProtoDTLS, "Client sent UseExtendedMasterSecret extension, client wants to use ExtendedMasterSecret. We will generate the master secret via extended way further.")
               // }
             }
-
-            context.clientRandom = message.random;
+// print("Client random: ${}")
+            // context.clientRandom = message.random;
             //logging.Descf(//logging.ProtoDTLS, "Client sent Client Random, it set to <u>0x%x</u> in handshake context.", message.Random.Encode())
             context.serverRandom = TlsRandom.defaultInstance();
             context.serverRandom.populate();
             // context.serverRandom.generate();
             //logging.Descf(//logging.ProtoDTLS, "We generated Server Random, set to <u>0x%x</u> in handshake context.", context.ServerRandom.Encode())
 
-            final clientRandomBytes = context.clientRandom.marshal();
+            final clientRandomBytes = context.clientRandom.raw();
             final serverRandomBytes = context.serverRandom.marshal();
             print("Server random length: ${serverRandomBytes.length}");
 
@@ -545,7 +545,7 @@ class HandshakeManager {
 
     // pre Master secret: fb34ef080bf9f808b94665cd41ad16761b98653d1b7208ec44fc88b997819f48
 
-    final clientRandomBytes = context.clientRandom.marshal();
+    final clientRandomBytes = context.clientRandom.raw();
     final serverRandomBytes = context.serverRandom.marshal();
 
     // if context.UseExtendedMasterSecret {
@@ -569,6 +569,8 @@ class HandshakeManager {
         preMasterSecret, clientRandomBytes, serverRandomBytes);
 
     print("Master secret: ${HEX.encode(context.serverMasterSecret)}");
+    print("Server random: ${HEX.encode(serverRandomBytes)}");
+    print("Client random: ${HEX.encode(clientRandomBytes)}");
 
     //dart Master secret: 6b0d05a652c61f336a86a66c0bc33fe59d8b740ec85159eed8bf391810dc4dcca9132bacd9f287f12d3d128f08e950c9
     //  ts Master secret: e8d0d762817ed783c9707ab40444e70e0ecb2207ccfd6ef46ae5d2c7c8d1c9b6175bbc1b3bdf0339fe05ff27c5438736

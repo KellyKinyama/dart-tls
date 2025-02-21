@@ -7,13 +7,17 @@ const int HANDSHAKE_RANDOM_LENGTH = RANDOM_BYTES_LENGTH + 4;
 class TlsRandom {
   DateTime gmt_unix_time;
   List<int> randomBytes = List.filled(28, 0);
-  TlsRandom(this.gmt_unix_time, this.randomBytes) {
+
+  Uint8List? unMarshalledRandomData;
+  TlsRandom(this.gmt_unix_time, this.randomBytes,
+      {this.unMarshalledRandomData}) {
     if (randomBytes.length != RANDOM_BYTES_LENGTH) {
       throw "Invalid random bytes length: ${randomBytes.length}";
     }
   }
 
   factory TlsRandom.fromBytes(Uint8List bytes, int offset) {
+    int offSetBackup = offset;
     final secs = ByteData.sublistView(bytes, 0, 4).getUint32(0, Endian.big);
     final gmtUnixTime =
         DateTime.fromMillisecondsSinceEpoch(secs * 1000, isUtc: true);
@@ -22,7 +26,8 @@ class TlsRandom {
     final random_bytes = bytes.sublist(offset, offset + RANDOM_BYTES_LENGTH);
     offset += RANDOM_BYTES_LENGTH;
 
-    return TlsRandom(gmtUnixTime, random_bytes);
+    return TlsRandom(gmtUnixTime, random_bytes,
+        unMarshalledRandomData: bytes.sublist(offSetBackup, offset));
   }
 
   factory TlsRandom.defaultInstance() {
@@ -45,8 +50,13 @@ class TlsRandom {
     return bb.toBytes();
   }
 
+  Uint8List raw() {
+    return unMarshalledRandomData!;
+  }
+
   /// Unmarshal the object from bytes
   static TlsRandom unmarshal(Uint8List bytes, int offset, int arrayLen) {
+    int offSetBackup = offset;
     // if (bytes.length != HANDSHAKE_RANDOM_LENGTH) {
     //   throw FormatException("Invalid HandshakeRandom length");
     // }
@@ -63,10 +73,8 @@ class TlsRandom {
       throw "Invalid random bytes length: ${randomBytes.length}";
     }
 
-    return TlsRandom(
-      gmtUnixTime,
-      randomBytes,
-    );
+    return TlsRandom(gmtUnixTime, randomBytes,
+        unMarshalledRandomData: bytes.sublist(offSetBackup, offset));
   }
 
   /// Populate the random bytes and set the current time
@@ -76,7 +84,6 @@ class TlsRandom {
     randomBytes = List.generate(RANDOM_BYTES_LENGTH, (_) => rng.nextInt(256));
   }
 }
-
 
 final serverRandom = Uint8List.fromList([
   0x70,

@@ -23,6 +23,19 @@ import '../../ch09/key_exchange_algorithm.dart';
 //   print("Wanted PreMasterSecret:     $sec");
 // }
 
+// Server
+// pre Master secret: bc4acd6925f55d7aee8f517ae946c9a9d68f87d080ba690d578bd4843ef53bbd
+// Generated MasterSecret (not Extended) using Pre-Master Secret, Client Random and Server Random via <u>%s</u>: <u>0x%x</u> (<u>%d bytes</u>) SHA256
+// Master secret: 410db6d1f36f0774433baeb0f2103cdf5909c00b3d21ecd37ed0c648947de2f2271740f3af40afd2d71968de2d9134c3
+// Server random: 67b820fa0eda728a7c594362a37cfd43235a7bd1c0015f529bac303dd39a6ee2
+// Client random: 67b820fa90630b32fbfad6275b6683504dd4ad4ef7b1235f5c158c2e2fe6be68
+
+// Client
+// Pre Master secret: bc4acd6925f55d7aee8f517ae946c9a9d68f87d080ba690d578bd4843ef53bbd
+// Master secret: 410db6d1f36f0774433baeb0f2103cdf5909c00b3d21ecd37ed0c648947de2f2271740f3af40afd2d71968de2d9134c3
+// Server random: 67b820fa0eda728a7c594362a37cfd43235a7bd1c0015f529bac303dd39a6ee2
+// Client random: 67b820fa90630b32fbfad6275b6683504dd4ad4ef7b1235f5c158c2e2fe6be68
+//                                                                                                                 
 Future<void> main() async {
   // testPreMasterSecretP256();
   // var keys = generateP256Keys();

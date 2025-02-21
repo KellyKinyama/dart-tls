@@ -115,12 +115,22 @@ class DecodeDtlsMessageResult {
 
           return DecodeDtlsMessageResult(header, handshakeHeader, result);
         } else {
-          final (handshakeHeader, decodedOffset, err) = HandshakeHeader.decode(
-              decryptedBytes!, 0, decryptedBytes!.length);
-          final result = decodeHandshake(header, handshakeHeader,
-              decryptedBytes!, 0, decryptedBytes!.length);
+          offset = 0;
 
-          final copyArray = Uint8List.fromList(decryptedBytes!);
+          final (decryptedHeader, decryptedOffset, decryptedErr) =
+              RecordLayerHeader.unmarshal(buf,
+                  offset: offset, arrayLen: arrayLen);
+
+          offset = decryptedOffset;
+          final (handshakeHeader, decodedOffset, err) = HandshakeHeader.decode(
+              decryptedBytes, offset, decryptedBytes.length);
+
+          offset = decodedOffset;
+
+          final result = decodeHandshake(decryptedHeader, handshakeHeader,
+              decryptedBytes, offset, decryptedBytes.length);
+
+          final copyArray = Uint8List.fromList(decryptedBytes);
           context.HandshakeMessagesReceived[handshakeHeader.handshakeType] =
               copyArray;
 

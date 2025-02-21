@@ -80,7 +80,7 @@ class GCM {
     }
 
     final nonce = Uint8List(gcmNonceLength);
-    nonce.setRange(0, 4, localWriteIV.sublist(0, 4)); // Copy IV prefix
+    nonce.setRange(0, 4, remoteWriteIV.sublist(0, 4)); // Copy IV prefix
     nonce.setRange(
         4,
         12,
@@ -110,8 +110,8 @@ class GCM {
 // [Encrypt] Encrypted Final Part:
 // [Encrypt] Auth Tag: d2182a8cd2d4d91a6f59d34495a33184
 
-    print(
-        "decription key: ${await remoteKey.extractBytes()}, decription IV: $remoteWriteIV");
+    // print(
+    //     "decription key: ${await remoteKey.extractBytes()}, decription IV: $remoteWriteIV");
     // try {
     final secretBox = SecretBox(
         ciphertext.sublist(0, ciphertext.length - gcmTagLength),
@@ -119,12 +119,14 @@ class GCM {
         mac: Mac(ciphertext.sublist(ciphertext.length - gcmTagLength)));
 
     final decrypted = await _localGcm.decrypt(secretBox,
-        secretKey: localKey, aad: additionalData);
+        secretKey: remoteKey, aad: additionalData);
 
     final result = Uint8List(recordLayerHeaderSize + decrypted.length);
     result.setRange(
         0, recordLayerHeaderSize, r.sublist(0, recordLayerHeaderSize));
     result.setRange(recordLayerHeaderSize, result.length, decrypted);
+
+    print("decripted data: $result");
 
     return result;
     // } catch (e) {
