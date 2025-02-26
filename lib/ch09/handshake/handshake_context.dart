@@ -6,6 +6,7 @@ import 'package:dart_tls/ch09/enums.dart';
 import 'package:dart_tls/ch09/handshake/extension.dart';
 import 'package:dart_tls/ch09/handshake/handshake.dart';
 
+import '../key_exchange_algorithm.dart';
 import 'tls_random.dart';
 
 class HandshakeContext {
@@ -49,6 +50,8 @@ class HandshakeContext {
 
   int serverHandshakeSequenceNumber = 0;
 
+  late Uint8List extensionsData;
+
   void increaseServerSequence() {
     serverSequenceNumber++;
   }
@@ -59,7 +62,7 @@ class HandshakeContext {
 
   int serverEpoch = 0;
 
-  late bool UseExtendedMasterSecret;
+  bool UseExtendedMasterSecret = false;
 
   late int srtpProtectionProfile;
 
@@ -67,12 +70,35 @@ class HandshakeContext {
 
   late Uint8List session_id;
 
-  Map<ExtensionType, Extension> extensions = {};
+  Uint8List? keyingMaterialCache;
+
+  List<Extension> extensions = [];
 
   var compression_methods;
 
   late GCM gcm;
   void increaseServerEpoch() {
     serverEpoch++;
+    serverSequenceNumber = 0;
+  }
+
+  // https://github.com/pion/dtls/blob/bee42643f57a7f9c85ee3aa6a45a4fa9811ed122/state.go#L182
+  Uint8List exportKeyingMaterial(int length)
+// ([]byte, error)
+  {
+    if (keyingMaterialCache != null) {
+      return keyingMaterialCache!;
+    }
+    final encodedClientRandom = clientRandom.raw();
+    final encodedServerRandom = serverRandom.marshal();
+    // var err error
+    print(
+        "Exporting keying material from DTLS context (<u>expected length: $length)...");
+    keyingMaterialCache = generateKeyingMaterial(
+        serverMasterSecret, encodedClientRandom, encodedServerRandom, length);
+    // if err != nil {
+    // 	return nil, err
+    // }
+    return keyingMaterialCache!;
   }
 }

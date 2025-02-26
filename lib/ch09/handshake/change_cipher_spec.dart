@@ -18,7 +18,7 @@ class ChangeCipherSpec {
     if (buf[offset] != 0x01) {
       throw ('Invalid Cipher Spec');
     }
-    return (ChangeCipherSpec(), buf[offset], null);
+    return (ChangeCipherSpec(), offset, null);
   }
 
   static (ChangeCipherSpec, int, bool?) decode(

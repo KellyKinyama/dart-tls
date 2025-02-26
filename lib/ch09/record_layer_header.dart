@@ -7,7 +7,7 @@ class RecordLayerHeader {
   final ProtocolVersion protocolVersion;
   final int epoch;
   final int sequenceNumber; // uint48 in spec
-  final int contentLen;
+  int contentLen;
 
   static const MAX_SEQUENCE_NUMBER = 0x0000FFFFFFFFFFFF;
   static const RECORD_LAYER_HEADER_SIZE = 13;

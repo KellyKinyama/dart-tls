@@ -1,6 +1,8 @@
 // class BaseDtlsHandshakeMessage {}
 
+import 'dart:convert';
 import 'dart:typed_data';
+import 'package:dart_tls/ch09/handshake/application.dart';
 import 'package:dart_tls/ch09/handshake/change_cipher_spec.dart';
 import 'package:dart_tls/ch09/handshake/handshake_context.dart';
 
@@ -107,11 +109,16 @@ class DecodeDtlsMessageResult {
             return DecodeDtlsMessageResult(null, null, null);
           }
 
-          final result =
+          final (result, _, _) =
               decodeHandshake(header, handshakeHeader, buf, offset, arrayLen);
 
+          // if (handshakeHeader.handshakeType ==
+          //     HandshakeType.client_key_exchange) {
+          //   print("Decoding Handshake type: ${handshakeHeader.handshakeType}");
+          // }
+
           context.HandshakeMessagesReceived[handshakeHeader.handshakeType] =
-              Uint8List.fromList(buf.sublist(offsetBackup, offset));
+              Uint8List.fromList(buf.sublist(offsetBackup));
 
           return DecodeDtlsMessageResult(header, handshakeHeader, result);
         } else {
@@ -127,12 +134,11 @@ class DecodeDtlsMessageResult {
 
           offset = decodedOffset;
 
-          final result = decodeHandshake(decryptedHeader, handshakeHeader,
-              decryptedBytes, offset, decryptedBytes.length);
+          final (result, decoded, er) = decodeHandshake(decryptedHeader,
+              handshakeHeader, decryptedBytes, offset, decryptedBytes.length);
 
-          final copyArray = Uint8List.fromList(decryptedBytes);
           context.HandshakeMessagesReceived[handshakeHeader.handshakeType] =
-              copyArray;
+              decryptedBytes.sublist(decryptedOffset);
 
           return DecodeDtlsMessageResult(header, handshakeHeader, result);
         }
@@ -153,9 +159,28 @@ class DecodeDtlsMessageResult {
         }
 
       case ContentType.content_alert:
-        final alert = Alert.unmarshal(buf, offset, arrayLen);
+        final (alert, _, _) = Alert.unmarshal(buf, offset, arrayLen);
 
         return DecodeDtlsMessageResult(header, null, alert);
+
+      case ContentType.content_application_data:
+        {
+          offset = 0;
+
+          final (decryptedHeader, decryptedOffset, decryptedErr) =
+              RecordLayerHeader.unmarshal(decryptedBytes!,
+                  offset: offset, arrayLen: arrayLen);
+
+          offset = decryptedOffset;
+          print(
+              "Application data: ${utf8.decode(decryptedBytes.sublist(decryptedOffset))}");
+
+          final (appData, _, _) =
+              ApplicationData.unmarshal(buf, offset, decryptedBytes.length);
+          return DecodeDtlsMessageResult(header, null, appData);
+        }
+
+      // throw UnimplementedError("Unhandled content type: ${header.contentType}");
 
       // throw UnimplementedError("Unhandled content type: ${header.contentType}");
       default:

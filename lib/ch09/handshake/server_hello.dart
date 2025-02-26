@@ -16,7 +16,8 @@ class ServerHello {
   List<int> session_id;
   int cipher_suite;
   int compression_method;
-  Map<ExtensionType, Extension> extensions;
+  List<Extension> extensions;
+  Uint8List? extensionsData;
 
   ServerHello(
       this.client_version,
@@ -25,7 +26,8 @@ class ServerHello {
       this.session_id,
       this.cipher_suite,
       this.compression_method,
-      this.extensions);
+      this.extensions,
+      {this.extensionsData});
 
   ContentType getContentType() {
     return ContentType.content_handshake;
@@ -91,7 +93,8 @@ class ServerHello {
     bb.addByte(compression_method);
 
     // Write Extensions
-    bb.add(encodeExtensionMap(extensions));
+    // bb.add(encodeExtensionMap(extensions));
+    bb.add(extensionsData!);
 
     // Debug prints to check buffer sizes and offsets
     // print('Total Size: $totalSize');
@@ -160,44 +163,48 @@ class ServerHello {
     );
   }
 
-  Uint8List encodeExtensionMap(Map<ExtensionType, dynamic> extensions) {
-    // Calculate the total length of the encoded extensions
-    int totalLength = extensions.entries.fold(0, (sum, entry) {
-      int extensionLength = entry.value.size();
-      return sum +
-          4 +
-          extensionLength; // 2 bytes for type, 2 bytes for length, and extension data
-    });
+  // Uint8List encodeExtensionMap(Map<ExtensionType, dynamic> extensions) {
+  //   // Calculate the total length of the encoded extensions
+  //   int totalLength = extensions.entries.fold(0, (sum, entry) {
+  //     int extensionLength = entry.value.size();
+  //     return sum +
+  //         4 +
+  //         extensionLength; // 2 bytes for type, 2 bytes for length, and extension data
+  //   });
 
-    // Create a ByteData buffer to write the encoded extensions
-    ByteData writer = ByteData(2 + totalLength);
-    int offset = 0;
+  //   // Create a ByteData buffer to write the encoded extensions
+  //   ByteData writer = ByteData(2 + totalLength);
+  //   int offset = 0;
 
-    // Write the total length of the extensions (2 bytes)
-    writer.setUint16(offset, totalLength, Endian.big);
-    offset += 2;
+  //   // Write the total length of the extensions (2 bytes)
+  //   writer.setUint16(offset, totalLength, Endian.big);
+  //   offset += 2;
 
-    // Iterate over the extensions and write each one
-    extensions.forEach((extensionType, extension) {
-      // Write ExtensionType (2 bytes)
-      writer.setUint16(offset, extensionType.value, Endian.big);
-      offset += 2;
+  //   // Iterate over the extensions and write each one
+  //   extensions.forEach((extensionType, extension) {
+  //     // Write ExtensionType (2 bytes)
+  //     if (extension is ExtUnknown) {
+  //       writer.setUint16(offset, extension.type, Endian.big);
+  //     } else {
+  //       writer.setUint16(offset, extensionType.value, Endian.big);
+  //     }
+  //     offset += 2;
 
-      // Write the length of the extension data (2 bytes)
-      int extensionLength = extension.size();
-      writer.setUint16(offset, extensionLength, Endian.big);
-      offset += 2;
+  //     // Write the length of the extension data (2 bytes)
+  //     int extensionLength = extension.size();
+  //     writer.setUint16(offset, extensionLength, Endian.big);
+  //     offset += 2;
 
-      // Write the extension data
-      ByteData extensionData = ByteData(extensionLength);
-      //extension.marshal(extensionData);
-      writer.buffer.asUint8List().setRange(
-          offset, offset + extensionLength, extensionData.buffer.asUint8List());
-      offset += extensionLength;
-    });
+  //     // Write the extension data
+  //     ByteData extensionData = ByteData(extensionLength);
+  //     //extension.marshal(extensionData);
+  //     writer.buffer.asUint8List().setRange(
+  //         offset, offset + extensionLength, extensionData.buffer.asUint8List());
+  //     offset += extensionLength;
+  //   });
 
-    return writer.buffer.asUint8List();
-  }
+  //   return writer.buffer.asUint8List();
+  // }
 
   // Uint8List encodeExtensionMap(Map<ExtensionType, dynamic> extensions) {
   //   final bb = BytesBuilder();

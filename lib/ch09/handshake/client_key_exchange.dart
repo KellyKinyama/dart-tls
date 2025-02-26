@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'handshake.dart';
+
 class ClientKeyExchange {
   final List<int> identityHint;
   final List<int> publicKey;
@@ -9,10 +11,14 @@ class ClientKeyExchange {
     required this.publicKey,
   });
 
+  ContentType getContentType() {
+    return ContentType.content_handshake;
+  }
+
   // Handshake type
-  // HandshakeType handshakeType() {
-  //   return HandshakeType.ClientKeyExchange;
-  // }
+  HandshakeType getHandshakeType() {
+    return HandshakeType.client_key_exchange;
+  }
 
   // Calculate size
   int size() {
@@ -46,7 +52,11 @@ class ClientKeyExchange {
   // Unmarshal from byte array
   static ClientKeyExchange unmarshal(Uint8List data) {
     // print("Client key exchange data: $data");
-    int pskLength = ((data[0] << 8) | data[1]);
+    // int pskLength = ((data[0] << 8) | data[1]);
+    int offset = 0;
+    final publicKeyLength = data[0];
+    offset++;
+    // print("PSK length: $pskLength");
 
     // if (pskLength > data.length - 2) {
     //   throw "errBufferTooSmall";
@@ -54,12 +64,13 @@ class ClientKeyExchange {
 
     // print("Data length: ${data.length}");
     // print("PSK length: ${pskLength + 2}");
-    if (data.length == pskLength + 2) {
-      return ClientKeyExchange(
-        identityHint: data.sublist(2),
-        publicKey: [],
-      );
-    }
+    // if (pskLength > 0) {
+    //   print("PSK length: ${data.sublist(2, 2 + pskLength)}");
+    //   return ClientKeyExchange(
+    //     identityHint: data.sublist(2, 2 + pskLength),
+    //     publicKey: [],
+    //   );
+    // }
 
     // print("PSK length: $pskLength");
 
@@ -70,7 +81,7 @@ class ClientKeyExchange {
 
     return ClientKeyExchange(
       identityHint: [],
-      publicKey: data.sublist(1),
+      publicKey: data.sublist(offset, offset + publicKeyLength),
     );
   }
 

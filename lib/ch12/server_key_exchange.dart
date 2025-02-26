@@ -156,7 +156,7 @@ class ServerKeyExchange {
 
   @override
   String toString() {
-    return 'ServerKeyExchange(keyExchangeAlgorithm: $keyExchangeAlgorithm, params: $params, signedParams: ${signedParams?.length ?? 0})';
+    return 'ServerKeyExchange(keyExchangeAlgorithm: $keyExchangeAlgorithm, params: $params, signedParams: ${signedParams!.length ?? 0})';
   }
 }
 

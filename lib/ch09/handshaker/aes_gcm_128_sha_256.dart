@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:dart_tls/ch09/handshake/application.dart';
 import 'package:dart_tls/ch09/handshake/change_cipher_spec.dart';
 import 'package:dart_tls/ch09/handshake/handshake.dart';
 import 'package:dart_tls/ch09/handshake/server_key_exchange.dart';
@@ -37,47 +38,52 @@ class HandshakeManager {
 
   HandshakeManager(this.socket);
 
-  Uint8List concatHandshakeMessageTo(
-      Uint8List result,
+  (BytesBuilder, String, bool?) concatHandshakeMessageTo(
+      BytesBuilder result,
       String resultTypes,
       Map<HandshakeType, Uint8List> messagesMap,
       String mapType,
       HandshakeType handshakeType)
-// ([]byte, []string, bool)
+  // ([]byte, []string, bool)
   {
-    final item = messagesMap[handshakeType];
-    // if !ok {
-    // 	return result, resultTypes, false
-    // }
-    result = Uint8List.fromList([...result, ...item!]);
-    // resultTypes = append(resultTypes, fmt.Sprintf("%s (%s)", handshakeType, mapType))
-    return result;
-    //  resultTypes, true
+    if (messagesMap[handshakeType] == null) {
+      print("handshake => $handshakeType: type: ${messagesMap[handshakeType]}");
+    }
+    final item = messagesMap[handshakeType]!;
+
+    // result.add(result);
+    result.add(item);
+    resultTypes = "$resultTypes $handshakeType $mapType";
+    return (result, resultTypes, true);
   }
 
-  Uint8List concatHandshakeMessages(HandshakeContext context,
+  (Uint8List, String, bool?) concatHandshakeMessages(HandshakeContext context,
       bool includeReceivedCertificateVerify, bool includeReceivedFinished)
-//  ([]byte, []string, bool)
+// ([]byte, []string, bool)
   {
-    var result = Uint8List(0);
-    String resultTypes = "";
+    // result := make([]byte, 0)
+    // resultTypes := make([]string, 0)
     // var ok bool
-    result = concatHandshakeMessageTo(result, resultTypes,
+    BytesBuilder result = BytesBuilder();
+    String resultTypes = "";
+    bool? ok = false;
+
+    (result, resultTypes, ok) = concatHandshakeMessageTo(result, resultTypes,
         context.HandshakeMessagesReceived, "recv", HandshakeType.client_hello);
     // if !ok {
     // 	return nil, nil, false
     // }
-    result = concatHandshakeMessageTo(result, resultTypes,
+    (result, resultTypes, ok) = concatHandshakeMessageTo(result, resultTypes,
         context.HandshakeMessagesSent, "sent", HandshakeType.server_hello);
     // if !ok {
     // 	return nil, nil, false
     // }
-    result = concatHandshakeMessageTo(result, resultTypes,
+    (result, resultTypes, ok) = concatHandshakeMessageTo(result, resultTypes,
         context.HandshakeMessagesSent, "sent", HandshakeType.certificate);
     // if !ok {
     // 	return nil, nil, false
     // }
-    result = concatHandshakeMessageTo(
+    (result, resultTypes, ok) = concatHandshakeMessageTo(
         result,
         resultTypes,
         context.HandshakeMessagesSent,
@@ -86,26 +92,26 @@ class HandshakeManager {
     // if !ok {
     // 	return nil, nil, false
     // }
-    result = concatHandshakeMessageTo(
-        result,
-        resultTypes,
-        context.HandshakeMessagesSent,
-        "sent",
-        HandshakeType.certificate_request);
+    // (result, resultTypes, ok) = concatHandshakeMessageTo(
+    //     result,
+    //     resultTypes,
+    //     context.HandshakeMessagesSent,
+    //     "sent",
+    //     HandshakeType.certificate_request);
     // if !ok {
     // 	return nil, nil, false
     // }
-    result = concatHandshakeMessageTo(result, resultTypes,
+    (result, resultTypes, ok) = concatHandshakeMessageTo(result, resultTypes,
         context.HandshakeMessagesSent, "sent", HandshakeType.server_hello_done);
     // if !ok {
     // 	return nil, nil, false
     // }
-    result = concatHandshakeMessageTo(result, resultTypes,
-        context.HandshakeMessagesReceived, "recv", HandshakeType.certificate);
+    // (result, resultTypes, ok) = concatHandshakeMessageTo(result, resultTypes,
+    //     context.HandshakeMessagesReceived, "recv", HandshakeType.certificate);
     // if !ok {
     // 	return nil, nil, false
     // }
-    result = concatHandshakeMessageTo(
+    (result, resultTypes, ok) = concatHandshakeMessageTo(
         result,
         resultTypes,
         context.HandshakeMessagesReceived,
@@ -115,26 +121,25 @@ class HandshakeManager {
     // 	return nil, nil, false
     // }
     if (includeReceivedCertificateVerify) {
-      result = concatHandshakeMessageTo(
-          result,
-          resultTypes,
-          context.HandshakeMessagesReceived,
-          "recv",
-          HandshakeType.certificate_verify);
+      // (result, resultTypes, ok) = concatHandshakeMessageTo(
+      //     result,
+      //     resultTypes,
+      //     context.HandshakeMessagesReceived,
+      //     "recv",
+      //     HandshakeType.certificate_verify);
       // if !ok {
       // 	return nil, nil, false
       // }
     }
     if (includeReceivedFinished) {
-      result = concatHandshakeMessageTo(result, resultTypes,
+      (result, resultTypes, ok) = concatHandshakeMessageTo(result, resultTypes,
           context.HandshakeMessagesReceived, "recv", HandshakeType.finished);
       // if !ok {
       // 	return nil, nil, false
       // }
     }
 
-    return result;
-    // resultTypes, true
+    return (result.toBytes(), resultTypes, true);
   }
 
   Future<void> processDtlsMessage(Uint8List data) async {
@@ -147,17 +152,17 @@ class HandshakeManager {
 
   Future<bool?> ProcessIncomingMessage(
       HandshakeContext context, DecodeDtlsMessageResult incomingMessage) async {
-    var message;
-    try {
-      (message, _, _) = incomingMessage.message;
-    } catch (e, st) {
-      print("incomingMessage: $message");
-      print("Error: $e, Stack trace: $st");
-      message = incomingMessage.message;
-      if (message.runtimeType != ChangeCipherSpec) {
-        rethrow;
-      }
-    }
+    var message = incomingMessage.message;
+    // try {
+    //   (message, _, _) = incomingMessage.message;
+    // } catch (e, st) {
+    //   print("incomingMessage: $message");
+    //   print("Error: $e, Stack trace: $st");
+    //   message = incomingMessage.message;
+    //   if (message.runtimeType != ChangeCipherSpec) {
+    //     rethrow;
+    //   }
+    // }
 
     print("Message runtime type: ${message.runtimeType}");
     switch (message.runtimeType) {
@@ -167,6 +172,7 @@ class HandshakeManager {
         context.session_id = Uint8List.fromList(message.session_id);
         context.compression_methods = message.compression_methods;
         context.extensions = message.extensions;
+        context.extensionsData = message.extensionsData!;
 
         switch (context.flight) {
           case Flight.Flight0:
@@ -180,7 +186,7 @@ class HandshakeManager {
             // logging.LineSpacer(2)
             final helloVerifyRequestResponse =
                 createDtlsHelloVerifyRequest(context);
-            sendMessage(context, helloVerifyRequestResponse);
+            await sendMessage(context, helloVerifyRequestResponse);
             return null;
           case Flight.Flight2:
             if (message.cookie.length == 0) {
@@ -201,7 +207,7 @@ class HandshakeManager {
             context.cipherSuite = negotiatedCipherSuite.value;
             // //logging.Descf(//logging.ProtoDTLS, "Negotiation on cipher suites: Client sent a list of cipher suites, server selected one of them (mutually supported), and assigned in handshake context: %s", negotiatedCipherSuite)
             // Convert map entries to a list
-            final extensionList = message.extensions.entries.toList();
+            final extensionList = message.extensions;
 
             for (var extensionItem in extensionList) {
               // print("Extension runtime type: ${extensionItem.runtimeType}");
@@ -265,17 +271,17 @@ class HandshakeManager {
             //logging.Descf(//logging.ProtoDTLS, "Running into <u>Flight %d</u>.", context.Flight)
             //logging.LineSpacer(2)
             final serverHelloResponse = createServerHello(context);
-            sendMessage(context, serverHelloResponse);
+            await sendMessage(context, serverHelloResponse);
             final certificateResponse = createDtlsCertificate();
-            sendMessage(context, certificateResponse);
+            await sendMessage(context, certificateResponse);
             final serverKeyExchangeResponse =
                 createDtlsServerKeyExchange(context);
-            sendMessage(context, serverKeyExchangeResponse);
+            await sendMessage(context, serverKeyExchangeResponse);
             // final certificateRequestResponse =
             //     createDtlsCertificateRequest(context);
             // sendMessage(context, certificateRequestResponse);
             final serverHelloDoneResponse = createDtlsServerHelloDone(context);
-            sendMessage(context, serverHelloDoneResponse);
+            await sendMessage(context, serverHelloDoneResponse);
 
           // final finishedResponse = createDtlsFinished(context);
           // sendMessage(context, finishedResponse);
@@ -324,6 +330,7 @@ class HandshakeManager {
       // }
       case ClientKeyExchange:
         context.clientKeyExchangePublic = message.publicKey;
+
         if (!context.isCipherSuiteInitialized) {
           final err = await initCipherSuite(context);
           // if err != nil {
@@ -336,14 +343,17 @@ class HandshakeManager {
 
       // final finishedResponse = createDtlsFinished(context);
       // sendMessage(context, finishedResponse);
+      // final changeCipherSpecResponse = createDtlsChangeCipherSpec(context);
+      // await sendMessage(context, changeCipherSpecResponse);
+      // context.increaseServerEpoch();
 
       case Finished:
         print("client finished: $message");
         //logging.Descf(//logging.ProtoDTLS, "Received first encrypted message and decrypted successfully: Finished (epoch was increased to <u>%d</u>)", context.ClientEpoch)
         //logging.LineSpacer(2)
 
-        // final (handshakeMessages, handshakeMessageTypes, ok) =
-        //     concatHandshakeMessages(context, true, true);
+        final (handshakeMessages, handshakeMessageTypes, ok) =
+            concatHandshakeMessages(context, true, true);
         // if (!ok) {
         // 	return setStateFailed(context, errors.New("error while concatenating handshake messages"))
         // }
@@ -353,10 +363,9 @@ class HandshakeManager {
         // 		fmt.Sprintf("Concatenating messages in single byte array: \n<u>%s</u>", common.JoinSlice("\n", true, handshakeMessageTypes...)),
         // 		fmt.Sprintf("Generating hash from the byte array (<u>%d bytes</u>) via <u>%s</u>, using server master secret.", len(handshakeMessages), context.CipherSuite.HashAlgorithm),
         // 	})))
-        // final (calculatedVerifyData, err) = verifyFinishedData(
-        //     handshakeMessages,
-        //     context.serverMasterSecret,
-        //     context.cipherSuite.hashAlgorithm);
+        final calculatedVerifyData =
+            prfVerifyDataServer(handshakeMessages, context.serverMasterSecret);
+        print("Finished calculated data: $calculatedVerifyData");
         // if err != nil {
         // 	return m.setStateFailed(context, err)
         // }
@@ -365,17 +374,22 @@ class HandshakeManager {
         // //logging.Descf(//logging.ProtoDTLS, "Running into <u>Flight %d</u>.", context.Flight)
         // //logging.LineSpacer(2)
         final changeCipherSpecResponse = createDtlsChangeCipherSpec(context);
-        sendMessage(context, changeCipherSpecResponse);
-        // context.increaseServerEpoch();
+        await sendMessage(context, changeCipherSpecResponse);
+        context.increaseServerEpoch();
 
-        final finishedResponse = createDtlsFinished(context);
-        sendMessage(context, finishedResponse);
-        // //logging.Descf(//logging.ProtoDTLS, "Sent first encrypted message successfully: Finished (epoch was increased to <u>%d</u>)", context.ServerEpoch)
-        // //logging.LineSpacer(2)
+        final finishedResponse =
+            createDtlsFinished(context, calculatedVerifyData);
+        //  print("Finished");
+        await sendMessage(context, finishedResponse);
+      // //logging.Descf(//logging.ProtoDTLS, "Sent first encrypted message successfully: Finished (epoch was increased to <u>%d</u>)", context.ServerEpoch)
+      // //logging.LineSpacer(2)
 
-        // //logging.Infof(//logging.ProtoDTLS, "Handshake Succeeded with <u>%v:%v</u>.\n", context.Addr.IP, context.Addr.Port)
-        // context.dTLSState = DTLSState.DTLSStateConnected;
-        print("Finished");
+      // //logging.Infof(//logging.ProtoDTLS, "Handshake Succeeded with <u>%v:%v</u>.\n", context.Addr.IP, context.Addr.Port)
+      // context.dTLSState = DTLSState.DTLSStateConnected;
+
+      case ApplicationData:
+        sendMessage(context, message);
+
       default:
         {
           print("Un handled message: $message");
@@ -427,17 +441,24 @@ class HandshakeManager {
     //   return false;
     // });
 
-    final ec = ExtSupportedEllipticCurves();
-    ec.curves = [23];
+    // final ec = ExtSupportedEllipticCurves([23]);
 
-    context.extensions[ExtensionType.ExtensionTypeSupportedEllipticCurves] = ec;
+    // context.extensions[ExtensionType.ExtensionTypeSupportedEllipticCurves] = ec;
 
-    context.extensions.remove(ExtensionType.ExtensionTypeUnknown);
+    // context.extensions.remove(ExtensionType.ExtensionTypeUnknown);
 
-    context.extensions
-        .remove(ExtensionType.ExtensionTypeUseExtendedMasterSecret);
+    // context.extensions
+    //     .remove(ExtensionType.ExtensionTypeUseExtendedMasterSecret);
 
-    print("EXtensions: ${context.extensions}");
+    // if (context
+    //         .extensions[ExtensionType.ExtensionTypeUseExtendedMasterSecret] !=
+    //     null) {
+    context.UseExtendedMasterSecret = true;
+    // } else {
+    //   throw "Use extended master secret";
+    // }
+
+    // print("EXtensions: ${context.extensions}");
 
     return ServerHello(
         context.protocolVersion,
@@ -446,7 +467,8 @@ class HandshakeManager {
         context.session_id,
         CipherSuiteId.Tls_Ecdhe_Ecdsa_With_Aes_128_Gcm_Sha256.value,
         context.compression_methods[0],
-        context.extensions);
+        context.extensions,
+        extensionsData: context.extensionsData);
   }
 
   CipherSuiteId negotiateOnCipherSuiteIDs(List<CipherSuiteId> cipherSuiteIDs) {
@@ -477,10 +499,10 @@ class HandshakeManager {
   //  void increaseServerEpoch() {}
   // }
 
-  void sendMessage(HandshakeContext context, dynamic message) {
+  Future<void> sendMessage(HandshakeContext context, dynamic message) async {
     // print("object type: ${message.runtimeType}");
     final Uint8List encodedMessageBody = message.marshal();
-    final encodedMessage = BytesBuilder();
+    BytesBuilder encodedMessage = BytesBuilder();
     HandshakeHeader handshakeHeader;
     switch (message.getContentType()) {
       case ContentType.content_handshake:
@@ -495,7 +517,23 @@ class HandshakeManager {
         final encodedHandshakeHeader = handshakeHeader.marshal();
         encodedMessage.add(encodedHandshakeHeader);
         encodedMessage.add(encodedMessageBody);
+        context.HandshakeMessagesSent[message.getHandshakeType()] =
+            encodedMessage.toBytes();
+
+      case ContentType.content_change_cipher_spec:
+        {
+          encodedMessage.add(encodedMessageBody);
+        }
     }
+
+    //   final (header, _, _) = RecordLayerHeader.unmarshal(
+    //     Uint8List.fromList(finishedMarshalled),
+    //     offset: 0,
+    //     arrayLen: finishedMarshalled.length);
+
+    // // final raw = HEX.decode("c2c64f7508209fe9d6418302fb26b7a07a");
+    // final encryptedBytes =
+    //     await context.gcm.encrypt(header, Uint8List.fromList(finishedMarshalled));
 
     final header = RecordLayerHeader(
         contentType: message.getContentType(),
@@ -505,13 +543,28 @@ class HandshakeManager {
         contentLen: encodedMessage.toBytes().length);
 
     final encodedHeader = header.marshal();
-    final messageToSend = encodedHeader + encodedMessage.toBytes();
+    List<int> messageToSend = encodedHeader + encodedMessage.toBytes();
+
+    if (context.serverEpoch > 0) {
+      // Epoch is greater than zero, we should encrypt it.
+      if (context.isCipherSuiteInitialized) {
+        print("Message to encrypt: ${messageToSend.sublist(13)}");
+        final encryptedMessage = await context.gcm
+            .encrypt(header, Uint8List.fromList(messageToSend));
+        // if err != nil {
+        // 	panic(err)
+        // }
+        messageToSend = encryptedMessage;
+      }
+    }
+
     socket.send(messageToSend, socket.address, port);
     context.increaseServerSequence();
   }
 
-  Finished createDtlsFinished(HandshakeContext context) {
-    return Finished(Uint8List(0));
+  Finished createDtlsFinished(
+      HandshakeContext context, Uint8List verifiedData) {
+    return Finished(verifiedData);
   }
 
   generateCurveKeypair(Uint8List curve) {}
@@ -548,27 +601,32 @@ class HandshakeManager {
     final clientRandomBytes = context.clientRandom.raw();
     final serverRandomBytes = context.serverRandom.marshal();
 
-    // if context.UseExtendedMasterSecret {
-    // 	handshakeMessages, handshakeMessageTypes, ok := m.concatHandshakeMessages(context, false, false)
-    // 	if !ok {
-    // 		return errors.New("error while concatenating handshake messages")
-    // 	}
-    // 	logging.Descf(logging.ProtoDTLS,
-    // 		common.JoinSlice("\n", false,
-    // 			common.ProcessIndent("Initializing cipher suite...", "+", []string{
-    // 				fmt.Sprintf("Concatenating messages in single byte array: \n<u>%s</u>", common.JoinSlice("\n", true, handshakeMessageTypes...)),
-    // 				fmt.Sprintf("Generating hash from the byte array (<u>%d bytes</u>) via <u>%s</u>.", len(handshakeMessages), context.CipherSuite.HashAlgorithm),
-    // 			})))
-    // 	handshakeHash := context.CipherSuite.HashAlgorithm.Execute(handshakeMessages)
-    // 	logging.Descf(logging.ProtoDTLS, "Calculated Hanshake Hash: 0x%x (%d bytes). This data will be used to generate Extended Master Secret further.", handshakeHash, len(handshakeHash))
-    // 	context.ServerMasterSecret, err = GenerateExtendedMasterSecret(preMasterSecret, handshakeHash, context.CipherSuite.HashAlgorithm)
-    // 	logging.Descf(logging.ProtoDTLS, "Generated ServerMasterSecret (Extended): <u>0x%x</u> (<u>%d bytes</u>), using Pre-Master Secret and Hanshake Hash. Client Random and Server Random was not used.", context.ServerMasterSecret, len(context.ServerMasterSecret))
+    // if (true) {
+    if (true) {
+      final (handshakeMessages, handshakeMessageTypes, _) =
+          concatHandshakeMessages(context, false, false);
+      // 	if !ok {
+      // 		return errors.New("error while concatenating handshake messages")
+      // 	}
+      // 	logging.Descf(logging.ProtoDTLS,
+      // 		common.JoinSlice("\n", false,
+      // 			common.ProcessIndent("Initializing cipher suite...", "+", []string{
+      // 				fmt.Sprintf("Concatenating messages in single byte array: \n<u>%s</u>", common.JoinSlice("\n", true, handshakeMessageTypes...)),
+      // 				fmt.Sprintf("Generating hash from the byte array (<u>%d bytes</u>) via <u>%s</u>.", len(handshakeMessages), context.CipherSuite.HashAlgorithm),
+      // 			})))
+      final handshakeHash = createHash(handshakeMessages);
+      // 	logging.Descf(logging.ProtoDTLS, "Calculated Hanshake Hash: 0x%x (%d bytes). This data will be used to generate Extended Master Secret further.", handshakeHash, len(handshakeHash))
+      context.serverMasterSecret =
+          generateExtendedMasterSecret(preMasterSecret, handshakeHash);
+      // 	logging.Descf(logging.ProtoDTLS, "Generated ServerMasterSecret (Extended): <u>0x%x</u> (<u>%d bytes</u>), using Pre-Master Secret and Hanshake Hash. Client Random and Server Random was not used.", context.ServerMasterSecret, len(context.ServerMasterSecret))
+      print(
+          "Extended master secret: ${HEX.encode(context.serverMasterSecret)}");
+    } else {
+      // throw "Use extended master scret";
+      context.serverMasterSecret = generateMasterSecret(
+          preMasterSecret, clientRandomBytes, serverRandomBytes);
+    }
 
-    // } else {
-    context.serverMasterSecret = generateMasterSecret(
-        preMasterSecret, clientRandomBytes, serverRandomBytes);
-
-    print("Master secret: ${HEX.encode(context.serverMasterSecret)}");
     print("Server random: ${HEX.encode(serverRandomBytes)}");
     print("Client random: ${HEX.encode(clientRandomBytes)}");
 

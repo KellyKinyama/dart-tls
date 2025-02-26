@@ -107,7 +107,7 @@ void main() async {
   //   },
   // );
 
-  final dtlsClient = await DtlsClient.bind(bindAddress, 44445);
+  final dtlsClient = await DtlsClient.bind(bindAddress, 0);
 
   final DtlsConnection connection;
   try {

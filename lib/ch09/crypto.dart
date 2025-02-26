@@ -40,7 +40,11 @@ enum SignatureAlgorithm {
   final int value;
 
   factory SignatureAlgorithm.fromInt(int key) {
-    return values.firstWhere((element) => element.value == key);
+    return values.firstWhere((element) {
+      return element.value == key;
+    }, orElse: () {
+      return SignatureAlgorithm.unsupported;
+    });
   }
 }
 

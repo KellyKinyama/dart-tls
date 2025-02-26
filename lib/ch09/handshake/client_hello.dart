@@ -18,7 +18,8 @@ class ClientHello {
   List<CipherSuiteId> cipher_suites;
   int compression_methods_length;
   List<int> compression_methods;
-  Map<ExtensionType, Extension> extensions;
+  List<Extension> extensions;
+  Uint8List? extensionsData;
 
   ClientHello(
       this.client_version,
@@ -30,7 +31,8 @@ class ClientHello {
       this.cipher_suites,
       this.compression_methods_length,
       this.compression_methods,
-      this.extensions);
+      this.extensions,
+      {this.extensionsData});
 
   static (ClientHello, int, bool?) unmarshal(
       Uint8List data, int offset, int arrayLen) {
@@ -75,6 +77,7 @@ class ClientHello {
     offset = dof;
 
     // print("Compression methods: $compression_methods");
+    final extensionsData = data.sublist(offset);
 
     final extensions = decodeExtensionMap(data, offset, data.length);
     // print("extensions: $extensions");
@@ -90,7 +93,8 @@ class ClientHello {
           cipherSuiteIds,
           compression_methods.length,
           compression_methods,
-          extensions),
+          extensions,
+          extensionsData: extensionsData),
       offset,
       null
     );

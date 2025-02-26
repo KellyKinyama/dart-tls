@@ -276,7 +276,7 @@ Uint8List generateExtendedMasterSecret(
       [...utf8.encode("extended master secret"), ...handshakeHash]);
   final result = pHash(preMasterSecret, seed, 48);
   print(
-      "Generated extended MasterSecret (not Extended) using Pre-Master Secret, Client Random and Server Random via <u>%s</u>: <u>0x%x</u> (<u>%d bytes</u>) SHA256");
+      "Generated extended MasterSecret using Pre-Master Secret, Client Random and Server Random via <u>%s</u>: <u>0x%x</u> (<u>%d bytes</u>) SHA256");
   return result;
 }
 
@@ -292,6 +292,7 @@ Uint8List generateKeyingMaterial(Uint8List masterSecret, Uint8List clientRandom,
       "Generated Keying Material using Master Secret, Client Random and Server Random via <u>%s</u>: <u>0x%x</u> (<u>%d bytes</u>)");
   return result;
 }
+
 
 class EncryptionKeys {
   final Uint8List masterSecret;
@@ -388,6 +389,12 @@ Uint8List prfVerifyData(
     Uint8List.fromList(utf8.encode(label) + bytes),
     size,
   );
+}
+
+Uint8List createHash(
+  Uint8List message
+) {
+  return Uint8List.fromList(sha256.convert(message).bytes);
 }
 
 Uint8List prfVerifyDataClient(Uint8List masterSecret, Uint8List handshakes) {
