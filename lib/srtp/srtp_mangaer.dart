@@ -10,7 +10,7 @@ class SRTPManager {
   SRTPManager();
 
   SRTPContext newContext(ProtectionProfile protectionProfile) {
-    return SRTPContext(protectionProfile, null);
+    return SRTPContext(protectionProfile:protectionProfile, null);
   }
 
   EncryptionKeys extractEncryptionKeys(

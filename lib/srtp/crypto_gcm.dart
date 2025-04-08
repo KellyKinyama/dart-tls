@@ -64,7 +64,7 @@ class SRTP {
     final derivedKey =
         await aes.encrypt(prfInput, secretKey: SecretKey(masterKey));
 
-    final derivedKeyBytes = await derivedKey.cipherText.sublist(0, length);
+    final derivedKeyBytes = derivedKey.cipherText.sublist(0, length);
     return Uint8List.fromList(derivedKeyBytes);
   }
 

@@ -24,10 +24,10 @@ class DecodeDtlsMessageResult {
   final RecordLayerHeader? recordHeader;
   final HandshakeHeader? handshakeHeader;
   final dynamic message;
-  // final int offset;
+  final int finalOffset;
 
   DecodeDtlsMessageResult(
-      this.recordHeader, this.handshakeHeader, this.message);
+      this.recordHeader, this.handshakeHeader, this.message, this.finalOffset);
 
   static Future<DecodeDtlsMessageResult> decode(
       HandshakeContext context, Uint8List buf, int offset, int arrayLen) async {
@@ -41,6 +41,8 @@ class DecodeDtlsMessageResult {
     final (header, decodedOffset, err) =
         RecordLayerHeader.unmarshal(buf, offset: offset, arrayLen: arrayLen);
 
+    // final data=Uint8List.fromList()
+
     // print("Record header: $header");
 
     //print("offset: $offset, decodedOffset: $decodedOffset");
@@ -50,7 +52,7 @@ class DecodeDtlsMessageResult {
       // Ignore incoming message
       print("Header epock: ${header.epoch}");
       offset += header.contentLen;
-      return DecodeDtlsMessageResult(null, null, null);
+      return DecodeDtlsMessageResult(null, null, null, offset);
     }
 
     context.clientEpoch = header.epoch;
@@ -106,21 +108,18 @@ class DecodeDtlsMessageResult {
               handshakeHeader.fragmentLength.value) {
             // Ignore fragmented packets
             print('Ignore fragmented packets: ${header.contentType}');
-            return DecodeDtlsMessageResult(null, null, null);
+            return DecodeDtlsMessageResult(null, null, null, offset);
           }
 
-          final (result, _, _) =
+          final (result, decodedHandshakeOffset, _) =
               decodeHandshake(header, handshakeHeader, buf, offset, arrayLen);
-
-          // if (handshakeHeader.handshakeType ==
-          //     HandshakeType.client_key_exchange) {
-          //   print("Decoding Handshake type: ${handshakeHeader.handshakeType}");
-          // }
+          offset = decodedHandshakeOffset;
 
           context.HandshakeMessagesReceived[handshakeHeader.handshakeType] =
               Uint8List.fromList(buf.sublist(offsetBackup));
 
-          return DecodeDtlsMessageResult(header, handshakeHeader, result);
+          return DecodeDtlsMessageResult(
+              header, handshakeHeader, result, offset);
         } else {
           offset = 0;
 
@@ -137,10 +136,14 @@ class DecodeDtlsMessageResult {
           final (result, decoded, er) = decodeHandshake(decryptedHeader,
               handshakeHeader, decryptedBytes, offset, decryptedBytes.length);
 
+          print("Decrypted handshake type: ${handshakeHeader.handshakeType}");
+
           context.HandshakeMessagesReceived[handshakeHeader.handshakeType] =
+              // decryptedBytes;
               decryptedBytes.sublist(decryptedOffset);
 
-          return DecodeDtlsMessageResult(header, handshakeHeader, result);
+          return DecodeDtlsMessageResult(
+              header, handshakeHeader, result, decoded + offset);
         }
 
       case ContentType.content_change_cipher_spec:
@@ -155,13 +158,14 @@ class DecodeDtlsMessageResult {
 
           print("Change cipher spec: $changeCipherSpec");
 
-          return DecodeDtlsMessageResult(header, null, changeCipherSpec);
+          return DecodeDtlsMessageResult(
+              header, null, changeCipherSpec, decodedOffset);
         }
 
       case ContentType.content_alert:
-        final (alert, _, _) = Alert.unmarshal(buf, offset, arrayLen);
+        final (alert, decodedAlert, _) = Alert.unmarshal(buf, offset, arrayLen);
 
-        return DecodeDtlsMessageResult(header, null, alert);
+        return DecodeDtlsMessageResult(header, null, alert, decodedAlert);
 
       case ContentType.content_application_data:
         {
@@ -175,9 +179,10 @@ class DecodeDtlsMessageResult {
           print(
               "Application data: ${utf8.decode(decryptedBytes.sublist(decryptedOffset))}");
 
-          final (appData, _, _) =
+          final (appData, decodedApplicationData, _) =
               ApplicationData.unmarshal(buf, offset, decryptedBytes.length);
-          return DecodeDtlsMessageResult(header, null, appData);
+          return DecodeDtlsMessageResult(
+              header, null, appData, decodedApplicationData);
         }
 
       // throw UnimplementedError("Unhandled content type: ${header.contentType}");
@@ -192,7 +197,7 @@ class DecodeDtlsMessageResult {
 
     print("Message: $header");
 
-    return DecodeDtlsMessageResult(null, null, null);
+    return DecodeDtlsMessageResult(null, null, null, offset);
   }
 
   @override

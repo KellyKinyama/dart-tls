@@ -102,12 +102,11 @@ class RecordLayerHeader {
     }
 
     final reader = ByteData.sublistView(data);
-    //int offset = 0;
 
     ContentType contentType = ContentType.fromInt(reader.getUint8(offset++));
 
     if (contentType != ContentType.content_handshake) {
-      print("Content type: ${contentType}");
+      print("Content type: $contentType");
     }
     int major = reader.getUint8(offset++);
     int minor = reader.getUint8(offset++);
@@ -124,11 +123,6 @@ class RecordLayerHeader {
     offset += 6;
 
     ProtocolVersion protocolVersion = ProtocolVersion(major, minor);
-
-    // if (protocolVersion != ProtocolVersion.VERSION_DTLS10 &&
-    //     protocolVersion != ProtocolVersion.VERSION_DTLS12) {
-    //   throw ArgumentError("Unsupported protocol version: $protocolVersion");
-    // }
 
     int contentLen = reader.getUint16(offset, Endian.big);
     offset += 2;
@@ -158,12 +152,12 @@ RecordLayerHeader {
 }''';
   }
 
-  static (RecordLayerHeader, int, bool?) decode(
-      Uint8List buf, int offset, int arrayLen) {
-    final (rh, decodedOffset, err) =
-        RecordLayerHeader.unmarshal(buf, offset: offset, arrayLen: arrayLen);
-    return (rh, decodedOffset, null);
-  }
+  // static (RecordLayerHeader, int, bool?) decode(
+  //     Uint8List buf, int offset, int arrayLen) {
+  //   final (rh, decodedOffset, err) =
+  //       RecordLayerHeader.unmarshal(buf, offset: offset, arrayLen: arrayLen);
+  //   return (rh, decodedOffset, null);
+  // }
 }
 
 void main() {

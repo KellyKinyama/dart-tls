@@ -7,6 +7,7 @@ import 'package:dart_tls/ch09/handshake/extension.dart';
 import 'package:dart_tls/ch09/handshake/handshake.dart';
 
 import '../key_exchange_algorithm.dart';
+import 'extensions/extensions.dart';
 import 'tls_random.dart';
 
 class HandshakeContext {

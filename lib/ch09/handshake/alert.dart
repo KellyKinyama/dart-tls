@@ -205,9 +205,13 @@ class Alert {
 
   static (Alert, int, bool?) unmarshal(
       Uint8List buf, int offset, int arrayLen) {
+
+        final alertLevel=AlertLevel.from(buf[offset]);
+        offset++;
+        final alertDescription=AlertDescription.from(buf[offset]);
     return (
-      Alert(AlertLevel.from(buf[offset]), AlertDescription.from(buf[offset++])),
-      buf[offset],
+      Alert(alertLevel, alertDescription),
+      offset,
       null
     );
   }

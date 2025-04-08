@@ -50,11 +50,12 @@ class ClientKeyExchange {
   }
 
   // Unmarshal from byte array
-  static ClientKeyExchange unmarshal(Uint8List data) {
+  static (ClientKeyExchange, int, bool?) unmarshal(
+      Uint8List data, int offset, int arrayLen) {
     // print("Client key exchange data: $data");
     // int pskLength = ((data[0] << 8) | data[1]);
-    int offset = 0;
-    final publicKeyLength = data[0];
+    // int offset = 0;
+    final publicKeyLength = data[offset];
     offset++;
     // print("PSK length: $pskLength");
 
@@ -79,9 +80,13 @@ class ClientKeyExchange {
     //   throw Error(); // Replace with your own error handling.
     // }
 
-    return ClientKeyExchange(
-      identityHint: [],
-      publicKey: data.sublist(offset, offset + publicKeyLength),
+    final publicKey = data.sublist(offset, offset + publicKeyLength);
+    offset += publicKey.length;
+
+    return (
+      ClientKeyExchange(identityHint: [], publicKey: publicKey),
+      offset,
+      null
     );
   }
 
@@ -103,10 +108,10 @@ class ClientKeyExchange {
     return "{identityHint: $identityHint, publicKey: $publicKey}";
   }
 
-  static (ClientKeyExchange, int, bool?) decode(
-      Uint8List buf, int offset, int arrayLen) {
-    return (ClientKeyExchange.unmarshal(buf.sublist(offset)), offset, null);
-  }
+  // static (ClientKeyExchange, int, bool?) decode(
+  //     Uint8List buf, int offset, int arrayLen) {
+  //   return (ClientKeyExchange.unmarshal(buf.sublist(offset)), offset, null);
+  // }
 }
 
 void main() async {
@@ -124,7 +129,7 @@ void main() async {
 
   // Read the byte array back from the file and unmarshal it
   // Uint8List unmarshalledData = await File('handshake_data.dat').readAsBytes();
-  final unmarshalled = ClientKeyExchange.unmarshal(raw_psk);
+  final unmarshalled = ClientKeyExchange.unmarshal(raw_psk, 0, raw_psk.length);
 
   print('Unmarshalled: ${unmarshalled}');
   //print('Wanted:       ${raw_client_key_exchange.sublist(1)}');

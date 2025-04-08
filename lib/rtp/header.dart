@@ -37,7 +37,7 @@ class Extension {
   Extension(this.id, this.payload);
 }
 
-class Header {
+class RtpHeader {
   final int version;
   final bool padding;
   final bool extension;
@@ -49,7 +49,7 @@ class Header {
   final List<int> csrc;
   final Uint8List rawData;
 
-  Header(
+  RtpHeader(
     this.version,
     this.padding,
     this.extension,
@@ -68,8 +68,10 @@ class Header {
     return (payloadType <= 35) || (payloadType >= 96 && payloadType <= 127);
   }
 
-  static (Header, int)? decodeHeader(Uint8List buf, int offset, int arrayLen) {
-    if (buf.length < offset + 12) return null;
+  static (RtpHeader, int) decodeHeader(
+      Uint8List buf, int offset, int arrayLen) {
+    if (buf.length < offset + 12)
+      throw ArgumentError("wrong length: ${buf.length}");
 
     int initialOffset = offset;
     int firstByte = buf[offset++];
@@ -97,7 +99,8 @@ class Header {
 
     List<int> csrc = [];
     for (int i = 0; i < csrcCount; i++) {
-      if (offset + 4 > buf.length) return null;
+      if (offset + 4 > buf.length)
+        throw ArgumentError("wrong length: ${buf.length}");
       int value = (buf[offset] << 24) |
           (buf[offset + 1] << 16) |
           (buf[offset + 2] << 8) |
@@ -107,9 +110,35 @@ class Header {
     }
 
     return (
-      Header(version, padding, extension, marker, payloadType, sequenceNumber,
-          timestamp, ssrc, csrc, buf.sublist(initialOffset, offset)),
+      RtpHeader(
+          version,
+          padding,
+          extension,
+          marker,
+          payloadType,
+          sequenceNumber,
+          timestamp,
+          ssrc,
+          csrc,
+          buf.sublist(initialOffset, offset)),
       offset
     );
+  }
+
+  @override
+  String toString() {
+    // TODO: implement toString
+    return """
+    RTP header{
+      version: $version,
+      padding: $padding,
+      extension: $extension,
+      marker: $marker,
+      payload type: $payloadType,
+      Sequence number: $sequenceNumber,
+      time stamp: $timestamp,
+      ssrc: $ssrc,
+      csrc: $csrc
+    }""";
   }
 }

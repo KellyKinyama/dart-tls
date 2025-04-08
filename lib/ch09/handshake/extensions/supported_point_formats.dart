@@ -22,7 +22,7 @@ class ExtensionSupportedPointFormats {
     return ExtensionValue.supportedPointFormats;
   }
 
-  Future<void> marshal(ByteData writer) async {
+  void marshal(ByteData writer) {
     writer.setUint16(0, (1 + pointFormats.length) & 0xFFFF, Endian.big);
     writer.setUint8(2, pointFormats.length);
 
@@ -32,11 +32,10 @@ class ExtensionSupportedPointFormats {
       offset += 1;
     }
 
-    await writer.buffer.asUint8List();
+    writer.buffer.asUint8List();
   }
 
-  static Future<ExtensionSupportedPointFormats> unmarshal(
-      ByteData reader) async {
+  static ExtensionSupportedPointFormats unmarshal(ByteData reader) {
     reader.getUint16(0, Endian.big); // Skip the first 2 bytes
 
     int pointFormatCount = reader.getUint8(2);
@@ -53,7 +52,7 @@ class ExtensionSupportedPointFormats {
   }
 }
 
-void main() async {
+void main() {
   // Example usage
   var extension = ExtensionSupportedPointFormats(
       pointFormats: [ELLIPTIC_CURVE_POINT_FORMAT_UNCOMPRESSED]);
@@ -62,11 +61,10 @@ void main() async {
   var writer = ByteData(extension.size);
 
   // Marshal the object
-  await extension.marshal(writer);
+  extension.marshal(writer);
 
   // Unmarshal the object from ByteData (reader simulation)
-  var unmarshalledExtension =
-      await ExtensionSupportedPointFormats.unmarshal(writer);
+  var unmarshalledExtension = ExtensionSupportedPointFormats.unmarshal(writer);
 
   print('Unmarshalled Point Formats: ${unmarshalledExtension.pointFormats}');
 }

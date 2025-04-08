@@ -1,15 +1,15 @@
 import 'dart:typed_data';
 import 'package:collection/collection.dart';
+import '../rtp/packet.dart';
+import 'crypto_gcm.dart';
 import 'protection_profiles.dart';
-import 'rtp.dart';
-import 'gcm.dart';
 
 const int seqNumMax = 1 << 16;
 const int seqNumMedian = seqNumMax >> 1;
 
 class SRTPContext {
   final ProtectionProfile protectionProfile;
-  final GCM gcm;
+  final SRTP gcm;
   final Map<int, SRTPSsrcState> _srtpSsrcStates = {};
 
   SRTPContext({required this.protectionProfile, required this.gcm});
@@ -18,10 +18,13 @@ class SRTPContext {
     return _srtpSsrcStates.putIfAbsent(ssrc, () => SRTPSsrcState(ssrc));
   }
 
-  Uint8List? decryptRTPPacket(RTPPacket packet) {
-    final state = _getSRTPSsrcState(packet.header.ssrc);
+  Future<Uint8List?> decryptRTPPacket(
+      Uint8List buf, int offset, int arrayLen) async {
+    RtpPacket? packet = RtpPacket.decodePacket(buf, offset, arrayLen);
+
+    final state = _getSRTPSsrcState(packet!.header.ssrc);
     final roc = state.nextRolloverCount(packet.header.sequenceNumber);
-    final result = gcm.decrypt(packet, roc);
+    final result = await gcm.decrypt(buf, buf, roc);
     if (result == null) return null;
     return result.sublist(packet.headerSize);
   }
@@ -61,14 +64,14 @@ class SRTPSsrcState {
         difference = sequenceNumber - localSeq;
       }
     }
-    
+
     if (!rolloverHasProcessed) {
       index |= sequenceNumber;
       rolloverHasProcessed = true;
     } else if (difference > 0) {
       index += difference;
     }
-    
+
     return guessRoc;
   }
 }

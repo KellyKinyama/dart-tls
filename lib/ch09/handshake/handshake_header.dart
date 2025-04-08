@@ -162,7 +162,7 @@ class HandshakeHeader {
 
     case HandshakeType.client_key_exchange:
       // print("Handshake: $handshakeHeader");
-      return ClientKeyExchange.decode(buf, offset, arrayLen);
+      return ClientKeyExchange.unmarshal(buf, offset, arrayLen);
 
     case HandshakeType.certificate_verify:
       return CertificateVerify.decode(buf, offset, arrayLen);

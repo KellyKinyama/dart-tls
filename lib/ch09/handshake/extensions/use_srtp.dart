@@ -42,7 +42,8 @@ class ExtensionUseSrtp {
     return ExtensionValue.useSrtp;
   }
 
-  Future<void> marshal(ByteData writer) async {
+  void marshal(Uint8List data) {
+    ByteData writer = ByteData.sublistView(data);
     // Total size including MKI Length and protection profiles
     writer.setUint16(0, 2 + 1 + 2 * protectionProfiles.length, Endian.big);
     writer.setUint16(2, 2 * protectionProfiles.length, Endian.big);
@@ -55,10 +56,11 @@ class ExtensionUseSrtp {
 
     // MKI Length (always 0 in this case)
     writer.setUint8(offset, 0x00);
-    await writer.buffer.asUint8List();
+    writer.buffer.asUint8List();
   }
 
-  static Future<ExtensionUseSrtp> unmarshal(ByteData reader) async {
+  static ExtensionUseSrtp unmarshal(Uint8List data) {
+    ByteData reader = ByteData.sublistView(data);
     reader.getUint16(0, Endian.big); // Skip the first 2 bytes (length)
 
     int profileCount = reader.getUint16(2, Endian.big) ~/ 2;
@@ -81,21 +83,24 @@ class ExtensionUseSrtp {
 enum ExtensionValue { useSrtp }
 
 void main() async {
-  // Example usage
-  var extension = ExtensionUseSrtp(protectionProfiles: [
-    SrtpProtectionProfile.srtpAes128CmHmacSha180,
-    SrtpProtectionProfile.srtpAeadAes128Gcm,
-  ]);
+  // // Example usage
+  // var extension = ExtensionUseSrtp(protectionProfiles: [
+  //   SrtpProtectionProfile.srtpAes128CmHmacSha180,
+  //   SrtpProtectionProfile.srtpAeadAes128Gcm,
+  // ]);
 
-  // Create a ByteData to simulate the writer
-  var writer = ByteData(extension.size);
+  // // Create a ByteData to simulate the writer
+  // var writer = ByteData(extension.size);
 
-  // Marshal the object
-  await extension.marshal(writer);
+  // // Marshal the object
+  //  extension.marshal(writer);
 
   // Unmarshal the object from ByteData (reader simulation)
-  var unmarshalledExtension = await ExtensionUseSrtp.unmarshal(writer);
+  var unmarshalledExtension = ExtensionUseSrtp.unmarshal(raw_use_srtp);
 
   print(
       'Unmarshalled Protection Profiles: ${unmarshalledExtension.protectionProfiles}');
 }
+
+final raw_use_srtp = Uint8List.fromList(
+    [0x00, 0x05, 0x00, 0x02, 0x00, 0x01, 0x00]); //0x00, 0x0e,

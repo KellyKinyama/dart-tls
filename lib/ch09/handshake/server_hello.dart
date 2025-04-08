@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:dart_tls/ch09/crypto.dart';
+import 'package:dart_tls/ch09/handshake/extensions/extensions.dart';
 
 import 'extension.dart';
 import 'handshake.dart';
@@ -57,7 +58,7 @@ class ServerHello {
       ..buffer.asByteData().setUint16(0, cipher_suite, Endian.big));
 
     bb.addByte(compression_method);
-    bb.add(encodeExtensionMap(extensions));
+    bb.add(encodeExtensions(extensions));
 
     // result = append(result, m.CompressionMethodID)
 
@@ -152,7 +153,8 @@ class ServerHello {
 
     print("Compression methods: $ompressionMethodID");
 
-    final extensions = decodeExtensionMap(data, offset, data.length);
+    final (extensions, decodedExtensions) =
+        decodeExtensions(data, offset, data.length);
     print("extensions: $extensions");
 
     return (

@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:dart_tls/ch09/handshake/extensions/extensions.dart';
+
 import '../crypto.dart';
 import 'extension.dart';
 import 'handshake.dart';
@@ -79,7 +81,10 @@ class ClientHello {
     // print("Compression methods: $compression_methods");
     final extensionsData = data.sublist(offset);
 
-    final extensions = decodeExtensionMap(data, offset, data.length);
+    final (extensions, decodedExtensions) =
+        decodeExtensions(data, offset, data.length);
+
+    offset = decodedExtensions;
     // print("extensions: $extensions");
 
     return (

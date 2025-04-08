@@ -142,15 +142,32 @@ class HandshakeManager {
     return (result.toBytes(), resultTypes, true);
   }
 
+  final recordLayerHeaderSize = 13;
   Future<void> processDtlsMessage(Uint8List data) async {
-    final dtlsMsg =
-        await DecodeDtlsMessageResult.decode(context, data, 0, data.length);
+    int decodedLength = 0;
 
-    // print("dtls message: $dtlsMsg");
-    ProcessIncomingMessage(context, dtlsMsg);
+    while (decodedLength < data.length) {
+      print("Decoding Dtls message start lenth: $decodedLength");
+
+      var (rh, offset, _) = RecordLayerHeader.unmarshal(data,
+          offset: decodedLength, arrayLen: data.length - decodedLength);
+      // print("Record header: $rh");
+      final dataToDecode = data.sublist(
+          decodedLength, decodedLength + recordLayerHeaderSize + rh.contentLen);
+
+      final dtlsMsg = await DecodeDtlsMessageResult.decode(
+          context, dataToDecode, 0, dataToDecode.length);
+
+      print(
+          "Dtls message lenth: ${data.length}, decoded length: ${dtlsMsg.finalOffset}");
+      decodedLength = decodedLength + recordLayerHeaderSize + rh.contentLen;
+
+      // print("dtls message: $dtlsMsg");
+      processIncomingMessage(context, dtlsMsg);
+    }
   }
 
-  Future<bool?> ProcessIncomingMessage(
+  Future<bool?> processIncomingMessage(
       HandshakeContext context, DecodeDtlsMessageResult incomingMessage) async {
     var message = incomingMessage.message;
     // try {
@@ -363,8 +380,11 @@ class HandshakeManager {
         // 		fmt.Sprintf("Concatenating messages in single byte array: \n<u>%s</u>", common.JoinSlice("\n", true, handshakeMessageTypes...)),
         // 		fmt.Sprintf("Generating hash from the byte array (<u>%d bytes</u>) via <u>%s</u>, using server master secret.", len(handshakeMessages), context.CipherSuite.HashAlgorithm),
         // 	})))
+
+        // final handshakeHash = createHash(handshakeMessages);
         final calculatedVerifyData =
-            prfVerifyDataServer(handshakeMessages, context.serverMasterSecret);
+            // prfVerifyDataClient(handshakeMessages, context.serverMasterSecret);
+            prfVerifyDataServer(context.serverMasterSecret, handshakeMessages);
         print("Finished calculated data: $calculatedVerifyData");
         // if err != nil {
         // 	return m.setStateFailed(context, err)
@@ -560,6 +580,69 @@ class HandshakeManager {
 
     socket.send(messageToSend, socket.address, port);
     context.increaseServerSequence();
+  }
+
+  Future<void> sendMessageDummy(
+      HandshakeContext context, dynamic message) async {
+    // print("object type: ${message.runtimeType}");
+    final Uint8List encodedMessageBody = message.marshal();
+    BytesBuilder encodedMessage = BytesBuilder();
+    HandshakeHeader handshakeHeader;
+    switch (message.getContentType()) {
+      case ContentType.content_handshake:
+        // print("message type: ${message.getContentType()}");
+        handshakeHeader = HandshakeHeader(
+            handshakeType: message.getHandshakeType(),
+            length: Uint24.fromUInt32(encodedMessageBody.length),
+            messageSequence: context.serverHandshakeSequenceNumber,
+            fragmentOffset: Uint24.fromUInt32(0),
+            fragmentLength: Uint24.fromUInt32(encodedMessageBody.length));
+        context.increaseServerHandshakeSequence();
+        final encodedHandshakeHeader = handshakeHeader.marshal();
+        encodedMessage.add(encodedHandshakeHeader);
+        encodedMessage.add(encodedMessageBody);
+        context.HandshakeMessagesSent[message.getHandshakeType()] =
+            encodedMessage.toBytes();
+
+      case ContentType.content_change_cipher_spec:
+        {
+          encodedMessage.add(encodedMessageBody);
+        }
+    }
+
+    //   final (header, _, _) = RecordLayerHeader.unmarshal(
+    //     Uint8List.fromList(finishedMarshalled),
+    //     offset: 0,
+    //     arrayLen: finishedMarshalled.length);
+
+    // // final raw = HEX.decode("c2c64f7508209fe9d6418302fb26b7a07a");
+    // final encryptedBytes =
+    //     await context.gcm.encrypt(header, Uint8List.fromList(finishedMarshalled));
+
+    final header = RecordLayerHeader(
+        contentType: message.getContentType(),
+        protocolVersion: ProtocolVersion(254, 253),
+        epoch: context.serverEpoch,
+        sequenceNumber: context.serverSequenceNumber,
+        contentLen: encodedMessage.toBytes().length);
+
+    final encodedHeader = header.marshal();
+    List<int> messageToSend = encodedHeader + encodedMessage.toBytes();
+
+    if (context.serverEpoch > 0) {
+      // Epoch is greater than zero, we should encrypt it.
+      if (context.isCipherSuiteInitialized) {
+        print("Message to encrypt: ${messageToSend.sublist(13)}");
+        final encryptedMessage = await context.gcm
+            .encrypt(header, Uint8List.fromList(messageToSend));
+        // if err != nil {
+        // 	panic(err)
+        // }
+        messageToSend = encryptedMessage;
+      }
+    }
+
+    socket.send(messageToSend, socket.address, port);
   }
 
   Finished createDtlsFinished(

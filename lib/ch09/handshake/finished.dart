@@ -22,8 +22,9 @@ class Finished {
       Uint8List buf, int offset, int arrayLen) {
     // 	m.VerifyData = make([]byte, arrayLen)
     // copy(m.VerifyData, buf[offset:offset+arrayLen])
-    // offset += len(m.VerifyData)
-    return (Finished(buf.sublist(offset)), offset, null);
+    final verifyData = buf.sublist(offset);
+    offset += verifyData.length;
+    return (Finished(verifyData), offset, null);
 // return
   }
 
@@ -33,5 +34,11 @@ class Finished {
     // offset += len(m.VerifyData)
     return verifyData;
 // return
+  }
+
+  @override
+  String toString() {
+    // TODO: implement toString
+    return "Finished {verifyData: $verifyData}";
   }
 }

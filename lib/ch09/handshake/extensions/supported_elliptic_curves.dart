@@ -2,11 +2,13 @@ import 'dart:typed_data';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 
-enum NamedCurve {
-  curve1, // Example, replace with actual named curves.
-  curve2,
-  // Add other curves as needed
-}
+import '../../crypto.dart';
+
+// enum NamedCurve {
+//   curve1, // Example, replace with actual named curves.
+//   curve2,
+//   // Add other curves as needed
+// }
 
 class ExtensionSupportedEllipticCurves {
   final List<NamedCurve> ellipticCurves;
@@ -21,7 +23,7 @@ class ExtensionSupportedEllipticCurves {
     return ExtensionValue.supportedEllipticCurves;
   }
 
-  Future<void> marshal(ByteData writer) async {
+  void marshal(ByteData writer) {
     writer.setUint16(0, (2 + 2 * ellipticCurves.length) & 0xFFFF, Endian.big);
     writer.setUint16(2, (2 * ellipticCurves.length) & 0xFFFF, Endian.big);
 
@@ -32,11 +34,11 @@ class ExtensionSupportedEllipticCurves {
       offset += 2;
     }
 
-   writer.buffer.asUint8List();
+    writer.buffer.asUint8List();
   }
 
-  static Future<ExtensionSupportedEllipticCurves> unmarshal(
-      ByteData reader) async {
+  static ExtensionSupportedEllipticCurves unmarshal(Uint8List data) {
+    ByteData reader = ByteData.sublistView(data);
     reader.getUint16(0, Endian.big); // Skip the first 2 bytes
 
     int groupCount = reader.getUint16(2, Endian.big) ~/ 2;
@@ -45,7 +47,7 @@ class ExtensionSupportedEllipticCurves {
     int offset = 4;
     for (int i = 0; i < groupCount; i++) {
       var ellipticCurve =
-          NamedCurve.values[reader.getUint16(offset, Endian.big)];
+          NamedCurve.fromInt(reader.getUint16(offset, Endian.big));
       ellipticCurves.add(ellipticCurve);
       offset += 2;
     }
@@ -56,21 +58,24 @@ class ExtensionSupportedEllipticCurves {
 
 enum ExtensionValue { supportedEllipticCurves }
 
-void main() async {
+void main() {
   // Example usage
-  var extension = ExtensionSupportedEllipticCurves(
-      ellipticCurves: [NamedCurve.curve1, NamedCurve.curve2]);
+  // var extension = ExtensionSupportedEllipticCurves(
+  //     ellipticCurves: [NamedCurve.prime256v1, NamedCurve.x25519]);
 
-  // Create a ByteData to simulate the writer
-  var writer = ByteData(extension.size);
+  // // Create a ByteData to simulate the writer
+  // var writer = ByteData(extension.size);
 
-  // Marshal the object
-  await extension.marshal(writer);
+  // // Marshal the object
+  // extension.marshal(writer);
 
   // Unmarshal the object from ByteData (reader simulation)
   var unmarshalledExtension =
-      await ExtensionSupportedEllipticCurves.unmarshal(writer);
+      ExtensionSupportedEllipticCurves.unmarshal(raw_supported_groups);
 
   print(
       'Unmarshalled Elliptic Curves: ${unmarshalledExtension.ellipticCurves}');
 }
+
+final raw_supported_groups =
+    Uint8List.fromList([0x0, 0x4, 0x0, 0x2, 0x0, 0x1d]); // 0x0, 0xa,

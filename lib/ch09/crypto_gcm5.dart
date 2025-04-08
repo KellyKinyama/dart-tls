@@ -32,7 +32,7 @@ class GCM {
   }
 
   Future<Uint8List> encrypt(RecordLayerHeader header, Uint8List raw) async {
-    print("encryption key: $localKey, encryption IV: $localWriteIV");
+    // print("encryption key: $localKey, encryption IV: $localWriteIV");
     final payload = raw.sublist(recordLayerHeaderSize);
     final rawHeader = raw.sublist(0, recordLayerHeaderSize);
 
@@ -76,6 +76,7 @@ class GCM {
         offset: 0,
         arrayLen: r.length);
     if (header.contentType == ContentType.content_change_cipher_spec) {
+      print("Nothing to encript");
       return r;
     }
 
@@ -91,28 +92,6 @@ class GCM {
     final additionalData =
         _generateAEADAdditionalData(header, ciphertext.length - gcmTagLength);
 
-    // print("Additional data: ${additionalData}");
-    // print("nonce key: ${nonce}");
-
-    // print("[Decrypt] Nonce: ${bytesToHex(nonce)}");
-    // print("[Decrypt] Additional Data: ${bytesToHex(additionalData)}");
-    // print("[Decrypt] Ciphertext: ${bytesToHex(ciphertext)}");
-    // print(
-    //     "[Decrypt] MAC: ${bytesToHex(ciphertext.sublist(ciphertext.length - gcmTagLength))}");
-
-//         [Encrypt] IV: 44f32a7f0001000000000001
-// [Encrypt] Explicit Nonce: 0001000000000001
-// [Encrypt] Write Key: 19b90b9af2a541fa294611fbfe6f8167
-// [Encrypt] Additional Data: { epoch: 1, sequence: 1, type: 23, version: 65277, length: 17 }
-// [Encrypt] Additional Buffer: 000100000000000117fefd0011
-// [Encrypt] Data: 68656c6c6f2066726f6d20636c69656e74
-// [Encrypt] Encrypted Head Part: c2c64f7508209fe9d6418302fb26b7a07a
-// [Encrypt] Encrypted Final Part:
-// [Encrypt] Auth Tag: d2182a8cd2d4d91a6f59d34495a33184
-
-    // print(
-    //     "decription key: ${await remoteKey.extractBytes()}, decription IV: $remoteWriteIV");
-    // try {
     final secretBox = SecretBox(
         ciphertext.sublist(0, ciphertext.length - gcmTagLength),
         nonce: nonce,
